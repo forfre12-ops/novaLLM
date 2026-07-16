@@ -1,0 +1,43 @@
+# --- 대용량 산출물 (절대 커밋 금지) ---
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+checkpoints/*
+!checkpoints/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# 모델/텐서 파일 (혹시 다른 경로에 생겨도 차단)
+*.safetensors
+*.gguf
+*.bin
+*.pt
+*.ckpt
+*.pth
+*.npz
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+
+# --- 실험 추적 ---
+wandb/
+runs/
+mlruns/
+.hf_cache/
+
+# --- 환경/비밀 ---
+.env
+.env.local
+
+# --- OS ---
+Thumbs.db
+.DS_Store
+desktop.ini

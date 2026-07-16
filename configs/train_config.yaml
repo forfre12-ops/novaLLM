@@ -1,0 +1,28 @@
+# nova-llm QLoRA SFT 설정 — RTX 5070 Ti 16GB(Blackwell) 기준
+
+# 베이스 모델 (한국어 강한 오픈모델)
+#   Qwen/Qwen2.5-7B-Instruct              ← 기본. Apache-2.0(상업가능), 한국어 우수
+#   LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct  ← 한국어 최강급, 단 라이선스 비상업(연구용)
+#   google/gemma-2-9b-it                  ← Gemma 라이선스, 9B는 16GB QLoRA 빠듯(seq 짧게)
+base_model: "Qwen/Qwen2.5-7B-Instruct"
+chat_template: "chatml"      # Qwen=chatml, gemma=gemma, llama=llama-3
+
+# 데이터 — {"messages":[{"role","content"},...]} 형식 jsonl
+train_file: "data/processed/train.jsonl"
+max_seq_length: 2048
+
+# QLoRA
+lora_r: 16
+lora_alpha: 32
+load_in_4bit: true
+
+# 학습 하이퍼파라미터 (16GB 안전값)
+batch_size: 2                # OOM 나면 1로 낮추기
+grad_accum: 8                # 유효 배치 = batch_size * grad_accum = 16
+epochs: 2
+learning_rate: 2.0e-4
+seed: 3407
+
+# 출력
+output_dir: "checkpoints/sft-run1"
+report_to: "none"            # wandb 쓰려면 "wandb"

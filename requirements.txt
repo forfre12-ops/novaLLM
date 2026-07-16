@@ -1,0 +1,24 @@
+# PyTorch는 별도 설치 (Blackwell = CUDA 12.8):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+# 아래는 그 다음 설치.
+
+# 학습 스택
+transformers>=4.48.0
+datasets>=3.2.0
+accelerate>=1.2.0
+peft>=0.14.0
+trl>=0.13.0
+bitsandbytes>=0.45.0        # Blackwell(sm_120) 지원은 최신 버전 필요
+unsloth                      # 단일 GPU QLoRA 2x 가속 (Blackwell은 최신/nightly 확인)
+
+# 모델 병합 (SOLAR식 up-scaling / SLERP·DARE·TIES)
+mergekit
+
+# 평가 — 한국어 벤치마크 (LogicKor/KMMLU/HAERAE 등)
+lm-eval>=0.4.0
+
+# 유틸
+pyyaml>=6.0
+python-dotenv>=1.0
+huggingface_hub>=0.27
+wandb                        # 선택: 실험 추적 (report_to로 켜기)
