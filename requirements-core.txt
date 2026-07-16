@@ -1,0 +1,18 @@
+# T0-03 core deps — torch는 별도(cu128 인덱스)로 먼저 설치할 것:
+#   .venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cu128
+# 그 다음 이 파일 설치:
+#   .venv\Scripts\python.exe -m pip install -r requirements-core.txt
+#
+# Windows + Blackwell(sm_120) + 무컴파일 환경: prebuilt 휠만 사용.
+# unsloth/flash-attn(소스빌드)은 제외 — SDPA attention 사용.
+
+transformers>=4.48.0
+accelerate>=1.2.0
+peft>=0.14.0
+trl>=0.13.0
+datasets>=3.2.0
+bitsandbytes>=0.45.0        # sm_120 지원 prebuilt 휠
+safetensors
+sentencepiece
+huggingface_hub
+pyyaml
