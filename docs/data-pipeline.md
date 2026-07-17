@@ -87,7 +87,7 @@ python scripts/data/bulk_fetch_laws.py `
 
 ```powershell
 python scripts/data/merge_law_corpora.py `
-  --in data/processed/law_corpus_*.json `
+  --in data/processed/laws/*.json `
   --out data/processed/laws.json
 ```
 
