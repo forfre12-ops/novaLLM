@@ -44,6 +44,17 @@ python scripts/data/fetch_law.py `
   --corpus-out data/processed/law_corpus_헌법.json
 ```
 
+본문 조회는 `--response-type JSON`이 기본이다. API 응답이 JSON으로 불안정하면 XML로 바꿔도
+동일한 정규화 파서를 탄다.
+
+```powershell
+python scripts/data/fetch_law.py `
+  --mst <MST> `
+  --response-type XML `
+  --raw-out data/raw/law_service_헌법.xml `
+  --corpus-out data/processed/law_corpus_헌법.json
+```
+
 정규화 결과는 scorer가 바로 읽는 `articles` mapping과 provenance용 `entries`를 함께 가진다.
 
 ```json
@@ -81,6 +92,16 @@ python scripts/data/bulk_fetch_laws.py `
 # 키가 있으면 실수집
 python scripts/data/bulk_fetch_laws.py `
   --manifest data/raw/law_manifest.json `
+  --raw-dir data/raw/laws `
+  --corpus-dir data/processed/laws
+```
+
+필요하면 bulk도 XML fallback을 사용한다.
+
+```powershell
+python scripts/data/bulk_fetch_laws.py `
+  --manifest data/raw/law_manifest.json `
+  --response-type XML `
   --raw-dir data/raw/laws `
   --corpus-dir data/processed/laws
 ```

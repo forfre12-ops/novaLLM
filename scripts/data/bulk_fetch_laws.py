@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from data.fetch_law import build_service_url, fetch_json, write_json  # noqa: E402
+from data.fetch_law import build_service_url, fetch_text, parse_payload, write_json, write_text  # noqa: E402
 from data.law_corpus import normalize_law_payload  # noqa: E402
 
 
@@ -38,6 +38,7 @@ def main() -> int:
     ap.add_argument("--raw-dir", default="data/raw/laws")
     ap.add_argument("--corpus-dir", default="data/processed/laws")
     ap.add_argument("--target", default="eflaw")
+    ap.add_argument("--response-type", default="JSON", choices=["JSON", "XML"])
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--sleep", type=float, default=0.2)
     ap.add_argument("--dry-run", action="store_true")
@@ -58,17 +59,27 @@ def main() -> int:
     for idx, row in enumerate(rows, 1):
         name = row["law_name"]
         token = slug(f"{idx:03d}_{name}")
-        url = build_service_url(oc or "<LAW_API_KEY>", mst=row.get("mst", ""), law_id=row.get("law_id", ""), target=args.target)
-        raw_out = raw_dir / f"{token}.json"
+        url = build_service_url(
+            oc or "<LAW_API_KEY>",
+            mst=row.get("mst", ""),
+            law_id=row.get("law_id", ""),
+            target=args.target,
+            response_type=args.response_type,
+        )
+        raw_ext = "xml" if args.response_type == "XML" else "json"
+        raw_out = raw_dir / f"{token}.{raw_ext}"
         corpus_out = corpus_dir / f"{token}.json"
         if args.dry_run:
             print(f"[dry-run] {name}: {url}")
             print(f"          raw={raw_out} corpus={corpus_out}")
             continue
         print(f"[{idx}/{len(rows)}] fetching {name}: {url}")
-        data = fetch_json(url)
-        write_json(raw_out, data)
-        corpus = normalize_law_payload(data, source_url=url, raw_text=json.dumps(data, ensure_ascii=False))
+        raw = fetch_text(url)
+        if args.response_type == "XML":
+            write_text(raw_out, raw)
+        else:
+            write_json(raw_out, json.loads(raw))
+        corpus = normalize_law_payload(parse_payload(raw), source_url=url, raw_text=raw)
         write_json(corpus_out, corpus)
         if args.sleep:
             time.sleep(args.sleep)

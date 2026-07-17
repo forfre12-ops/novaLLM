@@ -21,7 +21,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from data.law_corpus import normalize_law_payload  # noqa: E402
+from data.law_corpus import normalize_law_payload, xml_to_obj  # noqa: E402
 
 SEARCH_URL = "https://www.law.go.kr/DRF/lawSearch.do"
 SERVICE_URL = "https://www.law.go.kr/DRF/lawService.do"
@@ -41,8 +41,15 @@ def build_search_url(oc: str, query: str) -> str:
     })
 
 
-def build_service_url(oc: str, *, mst: str = "", law_id: str = "", target: str = "eflaw") -> str:
-    params = {"OC": oc, "target": target, "type": "JSON"}
+def build_service_url(
+    oc: str,
+    *,
+    mst: str = "",
+    law_id: str = "",
+    target: str = "eflaw",
+    response_type: str = "JSON",
+) -> str:
+    params = {"OC": oc, "target": target, "type": response_type}
     if mst:
         params["MST"] = mst
     elif law_id:
@@ -56,11 +63,31 @@ def fetch_json(url: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def fetch_text(url: str) -> str:
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310
+        return resp.read().decode("utf-8")
+
+
+def parse_payload(raw: str):
+    stripped = raw.lstrip()
+    if stripped.startswith("<"):
+        return xml_to_obj(raw)
+    return json.loads(raw)
+
+
 def write_json(path: str | Path, data: dict) -> None:
     outp = Path(path)
     outp.parent.mkdir(parents=True, exist_ok=True)
     outp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     safe_print(f"저장: {outp}")
+
+
+def write_text(path: str | Path, text: str) -> None:
+    outp = Path(path)
+    outp.parent.mkdir(parents=True, exist_ok=True)
+    outp.write_text(text, encoding="utf-8")
+    safe_print(f"saved: {outp}")
 
 
 def main() -> int:
@@ -69,6 +96,7 @@ def main() -> int:
     ap.add_argument("--mst", help="lawService MST 값으로 본문 조회")
     ap.add_argument("--law-id", help="lawService ID 값으로 본문 조회")
     ap.add_argument("--target", default="eflaw", help="lawService target (기본: eflaw)")
+    ap.add_argument("--response-type", default="JSON", choices=["JSON", "XML"], help="lawService 응답 형식")
     ap.add_argument("--raw-out", default="data/raw/law.json")
     ap.add_argument("--corpus-out", help="lawService 응답을 표준 closed-set corpus로 정규화해 저장")
     ap.add_argument("--smoke", action="store_true")
@@ -80,7 +108,12 @@ def main() -> int:
         sample_oc = oc or "<LAW_API_KEY>"
         safe_print("요청 URL 구성 검증(smoke):")
         safe_print("  search : " + build_search_url(sample_oc, args.query))
-        safe_print("  service: " + build_service_url(sample_oc, mst=args.mst or "<MST>", law_id=args.law_id or ""))
+        safe_print("  service: " + build_service_url(
+            sample_oc,
+            mst=args.mst or "<MST>",
+            law_id=args.law_id or "",
+            response_type=args.response_type,
+        ))
         seed = Path("data/seed/constitution.json")
         if seed.exists():
             n = len(json.loads(seed.read_text(encoding="utf-8"))["articles"])
@@ -95,12 +128,21 @@ def main() -> int:
         return 2
 
     if args.mst or args.law_id:
-        url = build_service_url(oc, mst=args.mst or "", law_id=args.law_id or "", target=args.target)
+        url = build_service_url(
+            oc,
+            mst=args.mst or "",
+            law_id=args.law_id or "",
+            target=args.target,
+            response_type=args.response_type,
+        )
         safe_print("fetching service: " + url)
-        data = fetch_json(url)
-        write_json(args.raw_out, data)
+        raw = fetch_text(url)
+        if args.response_type == "XML":
+            write_text(args.raw_out, raw)
+        else:
+            write_json(args.raw_out, json.loads(raw))
         if args.corpus_out:
-            corpus = normalize_law_payload(data, source_url=url, raw_text=json.dumps(data, ensure_ascii=False))
+            corpus = normalize_law_payload(parse_payload(raw), source_url=url, raw_text=raw)
             write_json(args.corpus_out, corpus)
         return 0
 
