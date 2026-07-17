@@ -2,6 +2,24 @@
 
 한국어 LLM 평가 코드/설정을 여기에 둔다. (결과 산출물은 git 무시 대상)
 
+## 측정 스위트 — 이 프로젝트의 핵심 자산 ("own the ruler")
+
+전략상 진짜 산출물은 모델이 아니라 **근거충실도를 결정적으로(LLM-judge 없이) 측정하는 벤치**다.
+헌법 closed-set 위에서 인용의 실존·정확·tight함을 참/거짓으로 채점한다.
+
+| 도구 | 측정 | 자기검증 |
+|------|------|----------|
+| `scripts/eval/citation_verify.py` | 인용 실존·substring(hallucinated/misquote/supported) | `--demo` |
+| `scripts/eval/faithbench.py` | K조문 중 **올바른 조문 선택** 인용(selection_exact/leak) | `--demo` |
+| `scripts/eval/faithbench_partial.py` | **tight 부분인용**(span precision/recall/F1, 통째복사 페널티) | `--demo` |
+| `scripts/eval/faithbench_stats.py` | Wilson CI + 두-비율 유의성(TB-04p 최소판) | — |
+| `scripts/train/run_g0_faithbench.py` / `run_g0_partial.py` | 소형 FT vs 대형 base 교차비교(GPU) | — |
+
+**G0 실측 결론**은 `docs/env-verify/G0-summary.md`에 통합돼 있다. 요지: 파인튜닝이 근거충실 인용을
+가르치는 것은 결정적으로 증명됐으나, "소형이 대형을 이긴다"는 **축·레시피 의존적**(쉬운 선택 축에선
+경계 유의, 어려운 tight 인용 축에선 미지지)이다. 그래서 무게중심은 **모델 레이스가 아니라 측정 자산
+강화**에 둔다.
+
 ## 벤치마크
 
 | 벤치마크 | 측정 | 용도 |
