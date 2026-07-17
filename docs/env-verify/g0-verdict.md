@@ -94,5 +94,6 @@ base 7B는 partial_exact/precision이 높다. 이 축에서는 "소형 FT 우위
 ## 6. 벤치 동결 규칙
 
 - `faithbench v0.1`, `faithbench_partial v0.1`, `citation_verify v0.2`를 현 단계 기준으로 동결한다.
-- 다음 벤치 변형(의미 채점·다중 gold·요약 등)은 **외부 공개물 1개** 이후에만 착수한다.
+- 초기 공개물(`docs/public/citation-fingerprint.md`, commit `d784c81`) 이후에도, 다음 벤치 변형
+  (의미 채점·다중 gold·요약 등)은 **다법령 수집 또는 HRET 기여 준비와 직접 연결될 때만** 착수한다.
 - G1 전에는 벤치 정교화보다 **다법령 수집·공개·생태계 기여**를 우선한다.

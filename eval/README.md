@@ -38,8 +38,9 @@
 
 ## 벤치 동결 규칙
 
-faithbench v0.1 / faithbench_partial v0.1 **동결**. 다음 벤치 변형(의미 채점·다중 gold 등)은
-**외부 공개물 1개 출하 이후에만** 착수한다(g0-verdict.md §7). 지표 동결 후에만 모델 비교 주장 허용.
+faithbench v0.1 / faithbench_partial v0.1 **동결**. 초기 공개물 출하 이후에도 다음 벤치 변형
+(의미 채점·다중 gold 등)은 **다법령 수집 또는 HRET 기여 준비와 직접 연결될 때만** 착수한다
+(g0-verdict.md §6). 지표 동결 후에만 모델 비교 주장 허용.
 
 ## 사용
 
@@ -50,10 +51,10 @@ python scripts/eval/faithbench.py --demo
 
 # 교차비교(GPU) — 새 실험은 --out으로 기준선 덮어쓰기 방지, transcript 자동 저장
 python scripts/train/run_g0_faithbench.py --questions eval/questions.constitution.json \
-  --k 5 --near --closed-book --out docs/env-verify/g0-faithbench-v2-result.json
+  --k 5 --near --closed-book --out docs/env-verify/g0-faithbench-v02-result.json
 
 # 유의성(paired McNemar 자동 — transcript 있으면)
-python scripts/eval/faithbench_stats.py --result docs/env-verify/g0-faithbench-v2-result.json
+python scripts/eval/faithbench_stats.py --result docs/env-verify/g0-faithbench-v02-result.json
 ```
 
 ### 질문셋 형식

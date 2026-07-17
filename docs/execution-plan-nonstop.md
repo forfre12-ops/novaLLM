@@ -2,6 +2,11 @@
 
 > 본 문서는 4개 트랙(T0 환경 / A 빌드·정직화 / B 유명세 / C 환금)의 단락 분해에 검증 피드백을 반영한 **rev1**을, 다시 **2차 비평(missing·unrealistic_autonomy·weak_success_criteria·gate_logic_issues)을 전량 검토해 타당한 지적만 반영**한 최종본(rev2)이다. 핵심 개정: (a) **G0가 검증할 아티팩트(파인튜닝된 grounder)가 존재하도록** 미니 파인튜닝을 G0 앞으로 이동, (b) 모든 게이트에 **사전등록(pre-registered) 수치 임계** 부여, (c) **이중 위치 게이트 분리 명명**(G2-adopt/G2-build, G3-approve/G3-close), (d) **teacher 라이선스·풀스케일 데이터·human 채점·safety eval·예산 원장·미러 백업·롤백·이식 컨테이너·검정력** 누락 단락 신설, (e) **external '60m' 낙관 추정을 정직한 hours-scale ETA 모델로 대체**하고 도표에서도 무중단 구간이 짧음을 명시. 이 사용자의 autopilot plan.md 관례(단락=1커밋, 측정가능 성공조건, worktree 병렬 최대5, fail-fast 게이트)를 따른다.
 
+> **상태 업데이트(2026-07-18):** T0 환경 검증, 헌법 프로토타입, v0.2 위생 재평가, 공개 테크노트
+> (`docs/public/citation-fingerprint.md`)와 GitHub push는 완료됐다. 현재 G0 판정은 **SPLIT**이며,
+> 이 문서의 "소형 grounder 동급이상" 분기는 아직 열리지 않았다. 다음 실행 우선순위는
+> `LAW_API_KEY` 확보 → 다법령 closed-set 코퍼스 → Qwen3-4B/2~4B 정식 재판정이다.
+
 ---
 
 ## ① 개요
