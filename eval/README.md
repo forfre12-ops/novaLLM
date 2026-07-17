@@ -26,3 +26,38 @@ lm_eval --model hf \
   --tasks kmmlu,haerae \
   --device cuda:0 --batch_size auto
 ```
+
+## K-FaithBench 확장
+
+현재 프로토타입은 헌법 seed 코퍼스의 curated 질문을 기본으로 쓴다. 다법령 코퍼스로 키울 때는
+질문셋을 별도 JSON으로 두고 `--questions`로 주입한다.
+
+헌법 seed 코퍼스 전체용 curated 질문셋은 `eval/questions.constitution.json`에 있다.
+
+```powershell
+python scripts/eval/faithbench.py --questions eval/questions.constitution.json --near --out eval/instances.jsonl
+```
+
+모델 교차비교도 같은 질문셋으로 돌릴 수 있다.
+
+```powershell
+python scripts/train/run_g0_faithbench.py --questions eval/questions.constitution.json --k 5 --near
+```
+
+질문셋 형식은 아래 둘 중 하나다.
+
+```json
+{
+  "헌법 제1조 ①": "대한민국의 국가 형태는 무엇인가?"
+}
+```
+
+```json
+[
+  {"id": "헌법 제1조 ①", "question": "대한민국의 국가 형태는 무엇인가?"}
+]
+```
+
+`--include-all-corpus`는 질문이 없는 모든 조항을 ID 기반 sanity 질문으로 채우는 옵션이다. 표본 수를
+빠르게 늘리는 smoke에는 유용하지만, 질문에 조항ID가 노출되므로 정식 selection_exact 리포트에는
+curated 질문셋을 우선한다.

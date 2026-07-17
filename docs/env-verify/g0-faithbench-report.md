@@ -4,70 +4,70 @@
 
 ## 실험 — 파일럿 대비 무엇이 강화됐나
 
-파일럿(`g0-pilot-report.md`)의 한계를 정면으로 보완:
+파일럿(`g0-pilot-report.md`)의 한계를 정면으로 보완했다.
 
 | 파일럿 (약점) | faithbench (강화) |
 |---|---|
-| 근거 **1조문**만 제공 → verbatim '복사'만 하면 1.0 | **K=5조문(gold 1 + distractor 4)** 섞어 제공 → 올바른 조문 '선택'해야 정답 |
+| 근거 **1조문**만 제공 → verbatim 복사만 하면 1.0 | **K=5조문(gold 1 + distractor 4)** 섞어 제공 → 올바른 조문을 선택해야 정답 |
 | 질문이 조항ID 명시 → target_cited 자명 | **내용 기반 질문**(조항ID 미노출) |
-| distractor 없음 | `--near`로 **같은 조의 인접 항**을 하드 distractor로 |
-| 거절율 3모델 모두 1.0 포화 | leak/선택 지표로 변별 확보 |
+| 27개 curated 질문만 사용 | **헌법 seed 전체 93개 조·항 curated 질문셋** 사용 |
+| distractor 없음 | `--near`로 **같은 조의 인접 항**을 하드 distractor로 우선 |
 
-- 벤치: answerable 27(내용질문) + unanswerable 8, `k=5 --near`, seed 3407
+- 벤치: answerable 93 + unanswerable 8, `k=5 --near`, seed 3407
+- 질문셋: `eval/questions.constitution.json` (코퍼스 93개와 1:1, missing/extra 0, ID 힌트 lint 0)
 - 비교: base 1.5B(few-shot) vs **FT 1.5B(zero-shot, g0-pilot 어댑터)** vs base 7B(few-shot)
-- 핵심 지표 `selection_exact` = gold만 정확·충실 인용(distractor·환각 0). 파일럿엔 없던 '선택' 지표.
+- 핵심 지표 `selection_exact` = gold만 정확·충실 인용(distractor·환각 0)
 
-## 결과 — 전체 (answerable 27, unanswerable 8)
+## 결과 — 전체 (answerable 93, unanswerable 8)
 
 | 모델 | selection_exact | gold_recall | distractor_cite | faithfulness | leak_rate |
 |------|:---:|:---:|:---:|:---:|:---:|
-| base 1.5B (few-shot) | 0.037 | 0.111 | 0.593 | 0.302 | 0.125 |
-| **FT 1.5B (zero-shot)** | **0.778** | 0.778 | 0.148 | 0.815 | **0.0** |
-| base 7B (few-shot) | 0.444 | 0.556 | 0.148 | 0.537 | 0.0 |
+| base 1.5B (few-shot) | 0.151 | 0.215 | 0.441 | 0.339 | 0.25 |
+| **FT 1.5B (zero-shot)** | **0.742** | **0.742** | 0.204 | **0.806** | **0.0** |
+| base 7B (few-shot) | 0.591 | 0.613 | **0.043** | 0.613 | **0.0** |
 
-## 결과 — unseen 7조항만 (FT 학습 친숙도 편향 제거)
+전체 기준 FT 1.5B는 base 7B보다 `selection_exact`가 **+0.151** 높다(약 69/93 vs 55/93).
+base 7B는 distractor 인용률이 더 낮지만, gold 조항을 정확히 선택·인용하는 비율은 FT가 더 높다.
 
-faithbench gold 27개 중 20개는 파일럿 학습에 포함(seen), 7개는 held-out(unseen). 암기 편향을
-제거하려면 unseen만 봐야 한다. (pilot split 재현, seed 3407.)
+## 결과 — unseen 18조항만 (FT 학습 친숙도 편향 제거)
+
+pilot split(seed 3407)을 재현하면 answerable 93개 중 75개는 파일럿 학습에 노출된 seen,
+18개는 held-out unseen이다. 암기 편향을 보려면 unseen만 따로 봐야 한다.
 
 | 모델 | selection_exact | gold_recall | distractor_cite |
 |------|:---:|:---:|:---:|
-| base 1.5B (few-shot) | 0.0 (0/7) | 0.0 | 0.429 |
-| **FT 1.5B (zero-shot)** | **0.857 (6/7)** | 0.857 | 0.143 |
-| base 7B (few-shot) | 0.571 (4/7) | 0.714 | 0.143 |
+| base 1.5B (few-shot) | 0.167 (3/18) | 0.222 | 0.5 |
+| **FT 1.5B (zero-shot)** | **0.778 (14/18)** | **0.778** | 0.167 |
+| base 7B (few-shot) | 0.444 (8/18) | 0.444 | **0.0** |
 
-**FT의 seen vs unseen**: selection_exact seen 0.75(15/20) vs **unseen 0.857(6/7)** — unseen이 더 높음.
+**FT의 seen vs unseen**: selection_exact seen 0.733(55/75) vs unseen 0.778(14/18).
+unseen에서도 FT 1.5B가 base 7B보다 **+0.334** 높다.
 
 ## 해석 (정직)
 
-**증명된 것 (파일럿보다 강한 신호):**
-1. **벤치가 변별한다** — 파일럿에선 3모델이 1.0 근처로 포화했으나, 더 어려운 선택 태스크에선
-   base 1.5B가 `selection_exact 0.037`로 붕괴, base 7B 0.444, FT 1.5B 0.778로 **넓게 벌어짐**.
-2. **전략 핵심 가정 지지** — 5배 작은 FT 1.5B(0.778)가 대형 base 7B(0.444)를 선택적 근거충실도에서
-   **큰 마진(Δ+0.334)**으로 앞섬. 파일럿의 1문항 차(0.944 vs 1.0)와 질적으로 다른 격차.
-3. **암기 아님, 기술 전이** — FT의 unseen 점수(0.857)가 seen(0.75)보다 **오히려 높다**. 암기라면
-   seen이 높아야 하므로, 이 우위는 학습 친숙도가 아니라 "제공된 근거에서 올바른 조문을 선택·인용하는
-   기술"의 전이다. **편향 제거 후에도 FT(0.857) > base 7B(0.571) 유지.**
-4. **leak 억제** — unanswerable에서 FT·base7B는 leak 0, base 1.5B만 0.125(1/8). FT는 distractor
-   인용율도 0.148로 base 7B와 동급(대형 대비 열위 없음).
+**증명된 것:**
+1. **벤치가 더 넓은 표본에서도 변별한다** — 27문항에서 93문항으로 키워도 base 1.5B, FT 1.5B, base 7B 사이의 간격이 유지된다.
+2. **전략 핵심 가정 지지** — 5배 작은 FT 1.5B가 대형 base 7B를 선택적 근거충실도에서 앞선다. 전체는 +0.151, unseen은 +0.334다.
+3. **암기만으로 보기 어렵다** — FT의 unseen 점수가 seen보다 낮지 않다. 제공된 근거에서 올바른 조항을 선택·인용하는 기술이 전이된 신호다.
+4. **거절/leak은 FT와 base 7B 모두 안정적** — unanswerable 8개에서 둘 다 leak 0. base 1.5B는 leak 0.25.
 
-**증명되지 않은 것 (과대해석 금지):**
-- ⚠️ **n 소표본** — 특히 unseen은 **n=7**(6/7 vs 4/7 = 2문항 차)로 통계적으로 약함. 전체 27도 검정력
-  산정 전. 강한 결론엔 **검정력 N 산정(TB-04p)·다법령·human anchor** 필요.
-- ⚠️ **단일 법령·단일 형식** — 헌법 하나, 「」[] 인용 형식 고정. 다른 법령·모호질의·다중 gold·긴 조문의
-  **부분 span 인용**은 미검증(현 gold는 짧은 조문 통째 인용이라 substring 판정이 여전히 관대).
-- ⚠️ **거절 차원 포화** — FT·base7B 모두 refusal 1.0. leak은 base 1.5B에서만 변별 → 더 어려운
-  적대셋(토픽 근접 distractor로 over-citation 유도)이 필요.
-- ⚠️ **비대칭 조건** — FT는 이 도메인에 post-training됨, base 7B는 아님(few-shot만). 이는 결함이 아니라
-  전략의 주장 자체("faithfulness는 post-training이 좌우 → 소형이 경쟁")이나, "1.5B가 범용으로 7B보다
-  낫다"는 주장은 **아님**. 주장 범위는 "도메인 타겟 post-training한 1.5B > 미튜닝 7B few-shot".
+**증명되지 않은 것:**
+- **단일 법령 한계** — 여전히 헌법 제1~39조만 쓴다. 다법령·긴 조문·서로 비슷한 법률 간 distractor는 미검증이다.
+- **unseen도 아직 작다** — 18문항은 7문항보다 나아졌지만 강한 통계 결론에는 부족하다. 다법령으로 N을 키워야 한다.
+- **비대칭 조건** — FT는 해당 도메인에 post-training됐고, base 7B는 few-shot만 받았다. 주장은 “도메인 타겟 post-training한 소형 모델이 근거충실도 축에서 대형 base와 경쟁/우위 가능”이지, “1.5B가 범용으로 7B보다 낫다”가 아니다.
+- **부분 span·요약 충실도 미측정** — 현재 채점은 `「원문」[ID]` exact substring에 강하다. 부분 인용, 요약, 다중 gold 답변은 별도 설계가 필요하다.
 
 ## 결론
 
-전략 핵심 베팅("소형 FT가 대형 base를 근거충실도에서 이긴다")이 **파일럿보다 어려운 선택 태스크에서,
-암기 편향을 제거한 unseen에서도 유지됨을 실측**. 방향성은 명확하나 n이 작아 아직 '신호'이지 '증명'은
-아니다. 다음: (1) 검정력 기반 N 산정 + 다법령 코퍼스(국가법령정보 API) (2) 부분 span 인용·적대
-distractor로 난이도 상향 (3) human anchor 소표본 상관검정.
+전략 핵심 베팅("소형 FT가 대형 base를 근거충실도에서 이긴다")이 93개 curated 질문셋에서도 유지됐다.
+기존 27문항 결과보다 표본은 커졌고, unseen에서도 우위가 남았다. 다음 단계는 이 신호를 헌법 단일
+코퍼스 밖으로 옮기는 것이다.
 
-산출물: `docs/env-verify/g0-faithbench-result.json`(전체 + by_split), 벤치 `scripts/eval/faithbench.py`,
-러너 `scripts/train/run_g0_faithbench.py`.
+우선순위:
+1. 국가법령정보 API 기반 다법령 closed-set 코퍼스 구축
+2. `eval/questions.<law>.json` 형태의 법령별 curated 질문셋 추가
+3. 같은 `run_g0_faithbench.py --questions ... --k 5 --near`로 N 확장
+4. 부분 span 인용·근접 주제 distractor·다중 gold 질문 추가
+
+산출물: `docs/env-verify/g0-faithbench-result.json`, `eval/questions.constitution.json`,
+벤치 `scripts/eval/faithbench.py`, 러너 `scripts/train/run_g0_faithbench.py`.

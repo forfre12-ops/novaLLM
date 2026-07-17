@@ -9,7 +9,8 @@ accelerate>=1.2.0
 peft>=0.14.0
 trl>=0.13.0
 bitsandbytes>=0.45.0        # Blackwell(sm_120) 지원은 최신 버전 필요
-unsloth                      # 단일 GPU QLoRA 2x 가속 (Blackwell은 최신/nightly 확인)
+# Windows + Blackwell 무컴파일 검증 경로는 SDPA attention을 사용한다.
+# unsloth/flash-attn은 환경별 소스빌드 이슈가 있어 기본 의존성에서 제외.
 
 # 모델 병합 (SOLAR식 up-scaling / SLERP·DARE·TIES)
 mergekit

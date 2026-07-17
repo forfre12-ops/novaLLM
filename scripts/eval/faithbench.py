@@ -15,6 +15,7 @@ cited-ID 집합을 gold 집합과 비교(정밀도/재현율). 두 split:
 
     python scripts/eval/faithbench.py --demo             # 스코어러 자기검증(모델 불요)
     python scripts/eval/faithbench.py --dump 3           # 인스턴스 3개 미리보기
+    python scripts/eval/faithbench.py --questions eval/questions.json --out eval/instances.jsonl
 """
 from __future__ import annotations
 
@@ -79,13 +80,48 @@ UNANSWERABLE = [
 ]
 
 
+def load_questions(path: str | None) -> dict[str, str]:
+    """외부 질문셋 로드. JSON object 또는 [{"id","question"}] 모두 허용."""
+    if not path:
+        return {}
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        return {str(k): str(v) for k, v in data.items()}
+    if isinstance(data, list):
+        questions: dict[str, str] = {}
+        for row in data:
+            if not isinstance(row, dict) or "id" not in row or "question" not in row:
+                raise SystemExit(f"질문셋 항목 형식 오류: {row!r}")
+            questions[str(row["id"])] = str(row["question"])
+        return questions
+    raise SystemExit("--questions 는 JSON object 또는 list 여야 합니다.")
+
+
+def load_unanswerable(path: str | None) -> list[str] | None:
+    """외부 unanswerable 질문셋 로드. JSON list 또는 {"questions": [...]} 허용."""
+    if not path:
+        return None
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        data = data.get("questions")
+    if not isinstance(data, list) or not all(isinstance(q, str) for q in data):
+        raise SystemExit("--unanswerable-file 은 문자열 배열이어야 합니다.")
+    return data
+
+
 def _article_num(cid: str) -> str:
     """'헌법 제31조 ①' → '제31조' (같은 조의 인접 항 판별용)."""
     m = re.search(r"(제\d+조)", cid)
     return m.group(1) if m else cid
 
 
-def _pick_distractors(corpus: dict[str, str], gold: str, k: int, near: bool, rng: random.Random) -> list[str]:
+def _pick_distractors(
+    corpus: dict[str, str],
+    gold: str,
+    k: int,
+    near: bool,
+    rng: random.Random,
+) -> list[str]:
     others = [c for c in corpus if c != gold]
     if near:
         g = _article_num(gold)
@@ -105,20 +141,41 @@ def _context_block(items: list[tuple[str, str]]) -> str:
     return "[근거]\n" + "\n".join(lines)
 
 
-def build_instances(corpus: dict[str, str], k: int, near: bool, seed: int) -> list[dict]:
+def build_instances(
+    corpus: dict[str, str],
+    k: int,
+    near: bool,
+    seed: int,
+    questions: dict[str, str] | None = None,
+    unanswerable: list[str] | None = None,
+    include_all_corpus: bool = False,
+) -> list[dict]:
     """answerable(내용질문+distractor) + unanswerable(distractor만) 인스턴스 생성."""
     rng = random.Random(seed)
     insts: list[dict] = []
-    for gold_id, q in QUESTIONS.items():
+    question_bank = dict(QUESTIONS)
+    if questions:
+        question_bank.update(questions)
+    if include_all_corpus:
+        for cid in corpus:
+            question_bank.setdefault(cid, f"{cid}의 핵심 내용을 원문으로 인용해줘.")
+
+    for gold_id, q in question_bank.items():
         if gold_id not in corpus:
             continue
         distractors = _pick_distractors(corpus, gold_id, k - 1, near, rng)
         ctx = [(gold_id, corpus[gold_id])] + [(d, corpus[d]) for d in distractors]
         rng.shuffle(ctx)
+        question_source = (
+            "curated"
+            if gold_id in QUESTIONS or (questions and gold_id in questions)
+            else "id_fallback"
+        )
         insts.append({
             "split": "answerable",
             "gold": [gold_id],
             "question": q,
+            "question_source": question_source,
             "context_ids": [c for c, _ in ctx],
             "messages": [
                 {"role": "system", "content": SYS},
@@ -126,7 +183,7 @@ def build_instances(corpus: dict[str, str], k: int, near: bool, seed: int) -> li
             ],
         })
     all_ids = list(corpus.keys())
-    for q in UNANSWERABLE:
+    for q in (unanswerable if unanswerable is not None else UNANSWERABLE):
         ctx_ids = rng.sample(all_ids, min(k, len(all_ids)))
         ctx = [(c, corpus[c]) for c in ctx_ids]
         insts.append({
@@ -140,6 +197,14 @@ def build_instances(corpus: dict[str, str], k: int, near: bool, seed: int) -> li
             ],
         })
     return insts
+
+
+def write_jsonl(path: str, rows: list[dict]) -> None:
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8", newline="\n") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def score_answer(inst: dict, answer: str, corpus: dict[str, str]) -> dict:
@@ -230,6 +295,14 @@ def main() -> int:
     ap.add_argument("--k", type=int, default=5, help="컨텍스트 조문 수(gold 1 + distractor k-1)")
     ap.add_argument("--near", action="store_true", help="같은 조의 인접 항을 하드 distractor로 우선")
     ap.add_argument("--seed", type=int, default=3407)
+    ap.add_argument("--questions", help="추가/대체 질문셋 JSON(object 또는 list[{id,question}])")
+    ap.add_argument("--unanswerable-file", help="추가 unanswerable 질문 JSON(list 또는 {questions})")
+    ap.add_argument(
+        "--include-all-corpus",
+        action="store_true",
+        help="질문 없는 모든 코퍼스 항목도 ID 기반 sanity 질문으로 포함(정식 선택평가용 아님)",
+    )
+    ap.add_argument("--out", help="생성된 벤치 인스턴스를 JSONL로 저장")
     ap.add_argument("--demo", action="store_true", help="모델 없이 스코어러 자기검증")
     ap.add_argument("--dump", type=int, default=0, help="인스턴스 N개 미리보기")
     args = ap.parse_args()
@@ -240,10 +313,26 @@ def main() -> int:
     if args.demo:
         return _run_demo(corpus)
 
-    insts = build_instances(corpus, args.k, args.near, args.seed)
+    questions = load_questions(args.questions)
+    unanswerable = load_unanswerable(args.unanswerable_file)
+    insts = build_instances(
+        corpus,
+        args.k,
+        args.near,
+        args.seed,
+        questions=questions,
+        unanswerable=unanswerable,
+        include_all_corpus=args.include_all_corpus,
+    )
     n_ans = sum(1 for i in insts if i["split"] == "answerable")
     n_una = sum(1 for i in insts if i["split"] == "unanswerable")
-    print(f"인스턴스: answerable {n_ans} + unanswerable {n_una} = {len(insts)} (k={args.k}, near={args.near})")
+    print(
+        f"인스턴스: answerable {n_ans} + unanswerable {n_una} = {len(insts)} "
+        f"(k={args.k}, near={args.near})"
+    )
+    if args.out:
+        write_jsonl(args.out, insts)
+        print(f"저장: {args.out}")
 
     for inst in insts[: args.dump]:
         print("\n" + "=" * 60)

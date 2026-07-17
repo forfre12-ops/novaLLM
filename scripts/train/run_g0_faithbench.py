@@ -8,7 +8,8 @@ run_g0_compare의 강화판. 근거를 1조문이 아니라 K조문(gold + distr
 공정성: base 모델엔 few-shot(선택+인용 형식 예시 2 + 거절 1), FT는 zero-shot.
 채점은 결정적(citation_verify 기반, LLM-judge 없음).
 
-    python scripts/train/run_g0_faithbench.py --k 5 --near
+    python scripts/train/run_g0_faithbench.py \
+        --questions eval/questions.constitution.json --k 5 --near
 """
 from __future__ import annotations
 
@@ -21,7 +22,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eval.citation_verify import load_corpus  # noqa: E402
-from eval.faithbench import aggregate, build_instances, score_answer  # noqa: E402
+from eval.faithbench import (  # noqa: E402
+    aggregate,
+    build_instances,
+    load_questions,
+    load_unanswerable,
+    score_answer,
+)
 
 
 def pilot_split(corpus: dict[str, str], seed: int = 3407) -> tuple[set[str], set[str]]:
@@ -72,7 +79,12 @@ def gen(model, tok, messages: list[dict]) -> str:
         messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
     ).to("cuda")
     with torch.no_grad():
-        out = model.generate(**enc, max_new_tokens=160, do_sample=False, pad_token_id=tok.pad_token_id)
+        out = model.generate(
+            **enc,
+            max_new_tokens=160,
+            do_sample=False,
+            pad_token_id=tok.pad_token_id,
+        )
     return tok.decode(out[0][enc["input_ids"].shape[1]:], skip_special_tokens=True)
 
 
@@ -124,11 +136,26 @@ def main() -> int:
     ap.add_argument("--corpus", default="data/seed/constitution.json")
     ap.add_argument("--k", type=int, default=5, help="컨텍스트 조문 수(gold 1 + distractor k-1)")
     ap.add_argument("--near", action="store_true", help="같은 조의 인접 항을 하드 distractor로 우선")
+    ap.add_argument("--questions", help="추가/대체 질문셋 JSON(object 또는 list[{id,question}])")
+    ap.add_argument("--unanswerable-file", help="추가 unanswerable 질문 JSON(list 또는 {questions})")
+    ap.add_argument(
+        "--include-all-corpus",
+        action="store_true",
+        help="질문 없는 모든 코퍼스 항목도 ID 기반 sanity 질문으로 포함(정식 리포트용 아님)",
+    )
     ap.add_argument("--seed", type=int, default=3407)
     args = ap.parse_args()
 
     corpus = load_corpus(args.corpus)
-    insts = build_instances(corpus, args.k, args.near, args.seed)
+    insts = build_instances(
+        corpus,
+        args.k,
+        args.near,
+        args.seed,
+        questions=load_questions(args.questions),
+        unanswerable=load_unanswerable(args.unanswerable_file),
+        include_all_corpus=args.include_all_corpus,
+    )
     n_ans = sum(1 for i in insts if i["split"] == "answerable")
     n_una = sum(1 for i in insts if i["split"] == "unanswerable")
     fs = few_shot_msgs(corpus)
@@ -142,7 +169,9 @@ def main() -> int:
 
     print("\n[1/3] base small (few-shot) ...")
     m, t = load_base(args.small)
-    results["base_small_fewshot"], per_model["base_small_fewshot"] = eval_model(m, t, insts, corpus, fs)
+    results["base_small_fewshot"], per_model["base_small_fewshot"] = eval_model(
+        m, t, insts, corpus, fs
+    )
     print("  ", results["base_small_fewshot"])
 
     print("\n[2/3] FT small (zero-shot) ...")
@@ -150,14 +179,18 @@ def main() -> int:
 
     ft = PeftModel.from_pretrained(m, args.adapter)
     ft.eval()
-    results["ft_small_zeroshot"], per_model["ft_small_zeroshot"] = eval_model(ft, t, insts, corpus, None)
+    results["ft_small_zeroshot"], per_model["ft_small_zeroshot"] = eval_model(
+        ft, t, insts, corpus, None
+    )
     print("  ", results["ft_small_zeroshot"])
     free(ft)
     free(m)
 
-    print("\n[3/3] base large (few-shot) — USB HDD 로드 느림 ...")
+    print("\n[3/3] base large (few-shot) - USB HDD load can be slow ...")
     m2, t2 = load_base(args.large)
-    results["base_large_fewshot"], per_model["base_large_fewshot"] = eval_model(m2, t2, insts, corpus, fs)
+    results["base_large_fewshot"], per_model["base_large_fewshot"] = eval_model(
+        m2, t2, insts, corpus, fs
+    )
     print("  ", results["base_large_fewshot"])
     free(m2)
 
@@ -170,32 +203,56 @@ def main() -> int:
     outp = Path("docs/env-verify/g0-faithbench-result.json")
     outp.write_text(
         json.dumps({
-            "k": args.k, "near": args.near, "n_answerable": n_ans, "n_unanswerable": n_una,
-            "n_unseen_answerable": n_unseen, "results": results, "by_split": by_split,
-        }, ensure_ascii=False, indent=2),
+            "k": args.k,
+            "near": args.near,
+            "n_answerable": n_ans,
+            "n_unanswerable": n_una,
+            "questions": args.questions,
+            "unanswerable_file": args.unanswerable_file,
+            "include_all_corpus": args.include_all_corpus,
+            "n_unseen_answerable": n_unseen,
+            "results": results,
+            "by_split": by_split,
+        }, ensure_ascii=False, indent=2,
+        ),
         encoding="utf-8",
     )
 
-    print("\n===== 진짜 G0 — faithbench 교차비교 (전체) =====")
-    cols = ("selection_exact", "gold_recall", "distractor_cite_rate", "faithfulness_mean", "leak_rate")
+    print("\n===== 진짜 G0 - faithbench 교차비교 (전체) =====")
+    cols = (
+        "selection_exact",
+        "gold_recall",
+        "distractor_cite_rate",
+        "faithfulness_mean",
+        "leak_rate",
+    )
     print(f"  {'모델':<22}" + "".join(f"{c[:12]:>14}" for c in cols))
     for name, r in results.items():
         print(f"  {name:<22}" + "".join(f"{r[c]:>14}" for c in cols))
 
-    print(f"\n===== unseen(미학습 {n_unseen}조항)만 — 친숙도 편향 제거 =====")
+    print(f"\n===== unseen(미학습 {n_unseen}조항)만 - 친숙도 편향 제거 =====")
     print(f"  {'모델':<22}{'selection_ex':>14}{'gold_recall':>14}{'distractor_c':>14}")
     for name, sp in by_split.items():
         u = sp["unseen"]
-        print(f"  {name:<22}{u['selection_exact']:>14}{u['gold_recall']:>14}{u['distractor_cite_rate']:>14}")
+        print(
+            f"  {name:<22}{u['selection_exact']:>14}"
+            f"{u['gold_recall']:>14}{u['distractor_cite_rate']:>14}"
+        )
 
     ft_r, bl = results["ft_small_zeroshot"], results["base_large_fewshot"]
     ftu, blu = by_split["ft_small_zeroshot"]["unseen"], by_split["base_large_fewshot"]["unseen"]
-    win_all = ft_r["selection_exact"] >= bl["selection_exact"] and ft_r["leak_rate"] <= bl["leak_rate"]
+    win_all = (
+        ft_r["selection_exact"] >= bl["selection_exact"]
+        and ft_r["leak_rate"] <= bl["leak_rate"]
+    )
     win_unseen = ftu["selection_exact"] >= blu["selection_exact"]
-    print("\n  판정(전체):", "소형 FT ≥ 대형 base" if win_all else "대형 base 우위")
-    print("  판정(unseen):", "소형 FT ≥ 대형 base (친숙도 편향 제거 후에도 유지)" if win_unseen else "대형 base 우위")
+    print("\n  판정(전체):", "소형 FT >= 대형 base" if win_all else "대형 base 우위")
+    print(
+        "  판정(unseen):",
+        "소형 FT >= 대형 base (친숙도 편향 제거 후에도 유지)" if win_unseen else "대형 base 우위",
+    )
     print("  주의: n 소표본(특히 unseen)·단일 법령 프로토타입. 강한 결론엔 검정력 N·다법령·human anchor 필요.")
-    print("  → 저장:", outp)
+    print("  -> 저장:", outp)
     return 0
 
 

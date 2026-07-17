@@ -13,8 +13,8 @@ python -m venv .venv
 # 2) PyTorch — Blackwell(sm_120)은 CUDA 12.8 빌드
 pip install torch --index-url https://download.pytorch.org/whl/cu128
 
-# 3) 나머지 의존성
-pip install -r requirements.txt
+# 3) 검증된 핵심 의존성(Windows + Blackwell 무컴파일 경로)
+pip install -r requirements-core.txt
 
 # 4) 환경변수
 copy .env.example .env    # HF_TOKEN 등 채우기
@@ -47,7 +47,8 @@ python -c "import torch; print(torch.cuda.get_device_name(0), torch.cuda.is_avai
 # 기대: NVIDIA GeForce RTX 5070 Ti True
 ```
 
-`False`거나 sm_120 관련 에러가 나면 torch/bitsandbytes/unsloth 버전을 최신으로 올려야 한다.
+`False`거나 sm_120 관련 에러가 나면 torch/bitsandbytes 버전을 최신으로 올려야 한다.
+이 프로젝트의 현재 검증 경로는 `unsloth`/`flash-attn` 없이 SDPA attention을 사용한다.
 
 ## 주의
 
