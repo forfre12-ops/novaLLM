@@ -1,0 +1,45 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "corpus_n": 93,
+  "train_n": 300,
+  "eval_n": 18,
+  "eval_ids": [
+    "헌법 제32조 ④",
+    "헌법 제12조 ②",
+    "헌법 제3조",
+    "헌법 제32조 ①",
+    "헌법 제7조 ②",
+    "헌법 제12조 ③",
+    "헌법 제31조 ③",
+    "헌법 제24조",
+    "헌법 제1조 ②",
+    "헌법 제10조",
+    "헌법 제34조 ⑤",
+    "헌법 제8조 ①",
+    "헌법 제6조 ②",
+    "헌법 제25조",
+    "헌법 제12조 ⑤",
+    "헌법 제31조 ②",
+    "헌법 제5조 ①",
+    "헌법 제35조 ③"
+  ],
+  "epochs": 4,
+  "before": {
+    "n": 18,
+    "format_rate": 0.0,
+    "faithfulness_mean": 0.0,
+    "target_cited_rate": 0.0
+  },
+  "after": {
+    "n": 18,
+    "format_rate": 1.0,
+    "faithfulness_mean": 1.0,
+    "target_cited_rate": 1.0
+  },
+  "delta": {
+    "format_rate": 1.0,
+    "faithfulness_mean": 1.0,
+    "target_cited_rate": 1.0
+  },
+  "train_peak_GB": 2.56
+}
