@@ -20,6 +20,7 @@ RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
 - [`docs/data-pipeline.md`](docs/data-pipeline.md): 국가법령정보 OpenAPI 기반 다법령 코퍼스
   수집·정규화·질문셋 smoke 경로.
 - [`docs/next-runbook.md`](docs/next-runbook.md): `LAW_API_KEY`를 받은 뒤 바로 이어갈 실행 순서.
+- [`docs/hret-integration.md`](docs/hret-integration.md): HRET/HAE-RAE 생태계 기여 계획.
 
 ## 빠른 시작
 
