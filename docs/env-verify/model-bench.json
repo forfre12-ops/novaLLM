@@ -1,0 +1,28 @@
+[
+  {
+    "model": "Qwen/Qwen2.5-7B-Instruct",
+    "params_B": 4.35,
+    "load_s": 355.5,
+    "load_vram_GB": 5.69,
+    "infer_tok_s": 16.8,
+    "train_bs": 2,
+    "train_seq": 1024,
+    "train_peak_GB": 13.72,
+    "train_it_s": 0.21,
+    "loss_drop_pct": 99.9,
+    "fits_16gb": true
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "params_B": 2.21,
+    "load_s": 194.8,
+    "load_vram_GB": 3.4,
+    "infer_tok_s": 10.7,
+    "train_bs": 2,
+    "train_seq": 1024,
+    "train_peak_GB": 9.37,
+    "train_it_s": 0.5,
+    "loss_drop_pct": 93.4,
+    "fits_16gb": true
+  }
+]
