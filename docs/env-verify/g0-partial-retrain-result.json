@@ -1,0 +1,34 @@
+{
+  "k": 5,
+  "near": true,
+  "n": 14,
+  "results": {
+    "base_small_fewshot": {
+      "n": 14,
+      "selected_gold": 0.571,
+      "span_precision": 0.292,
+      "span_recall": 0.349,
+      "span_f1": 0.277,
+      "span_ok": 0.143,
+      "partial_exact": 0.071
+    },
+    "ft_small_zeroshot": {
+      "n": 14,
+      "selected_gold": 0.643,
+      "span_precision": 0.386,
+      "span_recall": 0.643,
+      "span_f1": 0.451,
+      "span_ok": 0.286,
+      "partial_exact": 0.286
+    },
+    "base_large_fewshot": {
+      "n": 14,
+      "selected_gold": 0.786,
+      "span_precision": 0.471,
+      "span_recall": 0.743,
+      "span_f1": 0.529,
+      "span_ok": 0.286,
+      "partial_exact": 0.286
+    }
+  }
+}
