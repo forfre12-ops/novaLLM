@@ -12,6 +12,7 @@ RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
   **SPLIT**이며, "소형이 대형을 이긴다"는 단정은 금지한다.
 - [`docs/data-pipeline.md`](docs/data-pipeline.md): 국가법령정보 OpenAPI 기반 다법령 코퍼스
   수집·정규화·질문셋 smoke 경로.
+- [`docs/next-runbook.md`](docs/next-runbook.md): `LAW_API_KEY`를 받은 뒤 바로 이어갈 실행 순서.
 
 ## 빠른 시작
 
