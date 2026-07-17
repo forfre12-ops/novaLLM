@@ -1,0 +1,32 @@
+# 부분-span 재학습 — g0-pilot(통째복사) 결함을 tight-gold로 교정하는 실험.
+# base는 g0-pilot과 동일(Qwen2.5-1.5B-Instruct)해 '데이터만 바꾼' 공정 비교.
+
+base_model: "Qwen/Qwen2.5-1.5B-Instruct"
+chat_template: "chatml"
+
+train_file: "data/processed/partial_sft.jsonl"   # gen_partial_sft.py 산출(tight-gold)
+max_seq_length: 1024
+
+# QLoRA — g0-pilot과 동일 레시피(r16, attn 4-module)
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.0
+load_in_4bit: true
+target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+# 하이퍼파라미터 — 유효배치 8(=pilot과 유사), 4에폭
+batch_size: 4
+grad_accum: 2
+epochs: 4
+learning_rate: 2.0e-4
+weight_decay: 0.01
+warmup_ratio: 0.03
+seed: 3407
+gradient_checkpointing: true
+
+logging_steps: 10
+save_steps: 0                # 짧은 실험 — 최종 어댑터만 저장
+save_total_limit: 3
+
+output_dir: "checkpoints/g0-partial"
+report_to: "none"

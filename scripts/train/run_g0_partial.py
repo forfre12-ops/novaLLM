@@ -62,6 +62,7 @@ def main() -> int:
     ap.add_argument("--k", type=int, default=5)
     ap.add_argument("--near", action="store_true")
     ap.add_argument("--seed", type=int, default=3407)
+    ap.add_argument("--out", default="docs/env-verify/g0-partial-result.json")
     args = ap.parse_args()
 
     corpus = load_corpus(args.corpus)
@@ -93,7 +94,7 @@ def main() -> int:
     print("  ", results["base_large_fewshot"])
     free(m2)
 
-    outp = Path("docs/env-verify/g0-partial-result.json")
+    outp = Path(args.out)
     outp.write_text(
         json.dumps({"k": args.k, "near": args.near, "n": len(insts), "results": results},
                    ensure_ascii=False, indent=2),
