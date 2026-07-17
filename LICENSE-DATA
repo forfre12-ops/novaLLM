@@ -1,0 +1,30 @@
+# 데이터·벤치마크 라이선스 (LICENSE-DATA)
+
+이 저장소는 **코드**와 **데이터/벤치마크 산출물**에 서로 다른 라이선스를 적용한다.
+
+## 1. 코드 — Apache License 2.0
+`scripts/`, `configs/` 등 모든 소스 코드는 루트 [`LICENSE`](LICENSE)(Apache-2.0)를 따른다.
+
+## 2. 벤치마크 데이터셋·질문셋 — CC BY 4.0
+다음 산출물은 **Creative Commons Attribution 4.0 International (CC BY 4.0)** 로 배포한다:
+
+- `eval/questions.*.json` — 큐레이트 질문셋(faithbench / partial)
+- `eval/instances.*.jsonl` 등 생성된 벤치 인스턴스
+- `docs/env-verify/*-result.json`, `*-transcript.jsonl` — 채점 결과·transcript
+
+전문: https://creativecommons.org/licenses/by/4.0/legalcode
+요약: 자유 이용·재배포·변형 가능. 단 **출처 표시(attribution)** 필수.
+
+**Attribution 예:**
+> nova-llm faithbench (K-FaithBench prototype), CC BY 4.0.
+
+## 3. 원천 코퍼스 텍스트 — 공공(저작권 비보호)
+`data/seed/constitution.json` 등 법령 조문 본문은 대한민국 **저작권법 제7조**에 따라
+저작권 보호 대상이 아닌 공공 텍스트다(헌법·법률·조약·명령 등). 상업·변형 이용에
+제약이 없다. 국가법령정보 OpenAPI로 수집하는 다법령 코퍼스도 동일 원칙을 적용하되,
+수집 시점의 **스냅샷 버전·provenance**를 각 레코드에 기록한다(법령 개정 대비).
+
+## 4. 오염 회피(hard constraint)
+학습·벤치 어디에도 다음을 사용하지 않는다: AI-Hub(비상업), 모두의말뭉치(NC-ND),
+나무위키(NC), KoAlpaca/KULLM(GPT 유래 오염), OpenAI/Anthropic 모델 출력.
+teacher 합성은 Apache/MIT 오픈웨이트(Qwen/DeepSeek-R1-Distill 등)로만 한다.

@@ -12,6 +12,12 @@
 faithfulness_score = 지지된 인용 수 / 전체 인용 수.
 closed-set 이므로 false-negative는 코퍼스 범위 내에서 원천 0(정직: 코퍼스 밖은 판정 불가로 분리).
 
+스코어러 버전(SCORER_VERSION): 채점 규칙 변경 시 반드시 bump. 지표 동결 프로토콜상
+'소형 우위' 등 모델 비교 주장은 **동결된 SCORER_VERSION 기준**에서만 유효하다.
+  · v0.1 — 최초(NFC+공백 정규화, single-line 인용만)
+  · v0.2 — 줄바꿈 포함 인용 매칭(re.DOTALL), 가운뎃점/전각괄호 변형 정규화로
+           '형식만 다른 실제 인용'이 misquote/hallucinated로 오채점되던 구멍 축소.
+
 사용:
     python scripts/eval/citation_verify.py --demo
     python scripts/eval/citation_verify.py --corpus data/seed/constitution.json \
@@ -26,12 +32,27 @@ import sys
 import unicodedata
 from pathlib import Path
 
-CITE_RE = re.compile(r"「(.+?)」\s*\[(.+?)\]")
+SCORER_VERSION = "0.2"
+
+# 인용 패턴. re.DOTALL: 인용문이 줄바꿈을 포함해도 매칭(모델이 조문을 여러 줄로 출력하는 경우).
+CITE_RE = re.compile(r"「(.+?)」\s*\[(.+?)\]", re.DOTALL)
+
+# 유니코드 변형 통일 — 모델 출력이 시각적으로 같으나 코드포인트가 다른 문자를 쓸 때
+# exact substring 검사가 실패하는 것을 막는다. 양쪽(코퍼스·인용)에 동일 적용하므로
+# substring 의미는 보존된다.
+_CHAR_FOLD = {
+    "ㆍ": "·", "‧": "·", "・": "·",   # 가운뎃점 변형 → U+00B7 (코퍼스 본문에 47회 등장)
+    "﹒": ".", "．": ".",              # 전각/소형 마침표
+    "（": "(", "）": ")",              # 전각 소괄호
+    "，": ",", "、": ",",              # 전각/한중일 쉼표
+}
+_FOLD_RE = re.compile("|".join(re.escape(k) for k in _CHAR_FOLD))
 
 
 def _norm(s: str) -> str:
     """공백/유니코드 정규화 — exact-match 비교용."""
     s = unicodedata.normalize("NFC", s)
+    s = _FOLD_RE.sub(lambda m: _CHAR_FOLD[m.group()], s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
 

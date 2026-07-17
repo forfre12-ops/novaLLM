@@ -1,81 +1,75 @@
-# eval — 평가 하네스
+# eval — 한국어 근거충실도 측정 하네스 (own the ruler)
 
-한국어 LLM 평가 코드/설정을 여기에 둔다. (결과 산출물은 git 무시 대상)
+이 프로젝트의 진짜 산출물은 모델이 아니라 **한국어 AI가 근거에 충실한가를 LLM-judge 없이
+결정적으로 측정하는 벤치**다. 법령 closed-set 위에서 인용의 실존·정확·tight함을 참/거짓으로 채점한다.
 
-## 측정 스위트 — 이 프로젝트의 핵심 자산 ("own the ruler")
-
-전략상 진짜 산출물은 모델이 아니라 **근거충실도를 결정적으로(LLM-judge 없이) 측정하는 벤치**다.
-헌법 closed-set 위에서 인용의 실존·정확·tight함을 참/거짓으로 채점한다.
+## 측정 스위트
 
 | 도구 | 측정 | 자기검증 |
 |------|------|----------|
-| `scripts/eval/citation_verify.py` | 인용 실존·substring(hallucinated/misquote/supported) | `--demo` |
-| `scripts/eval/faithbench.py` | K조문 중 **올바른 조문 선택** 인용(selection_exact/leak) | `--demo` |
+| `scripts/eval/citation_verify.py` | 인용 실존·substring(hallucinated/misquote/supported), 스코어러 v0.2 | `--demo` |
+| `scripts/eval/faithbench.py` | K조문 중 **올바른 조문 선택** 인용(selection_exact) + leak 재정의(무인용 유출 포함) | `--demo` |
 | `scripts/eval/faithbench_partial.py` | **tight 부분인용**(span precision/recall/F1, 통째복사 페널티) | `--demo` |
-| `scripts/eval/faithbench_stats.py` | Wilson CI + 두-비율 유의성(TB-04p 최소판) | — |
-| `scripts/train/run_g0_faithbench.py` / `run_g0_partial.py` | 소형 FT vs 대형 base 교차비교(GPU) | — |
+| `scripts/eval/faithbench_stats.py` | Wilson CI + 두-비율 + **paired exact McNemar + Holm 보정** | 단위검증 |
+| `scripts/eval/run_meta.py` | 결과 provenance(git rev·모델·SHA256·seed·scorer 버전) | — |
+| `scripts/train/run_g0_faithbench.py` / `run_g0_partial.py` | 소형 FT vs 대형 base 교차비교(GPU) + per-instance transcript + closed-book 프로브 | — |
 
-**G0 실측 결론**은 `docs/env-verify/G0-summary.md`에 통합돼 있다. 요지: 파인튜닝이 근거충실 인용을
-가르치는 것은 결정적으로 증명됐으나, "소형이 대형을 이긴다"는 **축·레시피 의존적**(쉬운 선택 축에선
-경계 유의, 어려운 tight 인용 축에선 미지지)이다. 그래서 무게중심은 **모델 레이스가 아니라 측정 자산
-강화**에 둔다.
+## 경쟁 벤치 대비 차별점 (슬롯 선점)
 
-## 벤치마크
+2026-07 기준 한국어 신뢰성 벤치를 전수 확인한 결과, **"법령 closed-set + LLM judge 없는
+결정적 char-span 채점 + 생성·인용 태스크 + 소형 FT vs 대형 base 통제 비교"** 슬롯은 비어 있다.
 
-| 벤치마크 | 측정 | 용도 |
-|----------|------|------|
-| **LogicKor** | 한국어 추론/멀티턴 | 종합 품질 |
-| **KMMLU** | 한국어 지식(45개 과목) | 지식 능력 |
-| **HAERAE-Bench** | 한국 문화/역사/언어 | 한국 특화 |
-| **KoBEST** | 한국어 이해 | 기초 NLU |
-| **Ko-Arena / LMSYS** | 사람 선호 | 실사용 품질 |
+| 벤치/도구 | 도메인 | 채점 | 태스크 | 라이선스 |
+|---|---|---|---|---|
+| **이 프로젝트(faithbench)** | 법령 closed-set | **결정적 char-span(judge 없음)** | 생성+인용 | Apache/CC BY |
+| K-HALU (ICLR 2025) | 뉴스·서적 | 다중정답 탐지 | 환각 탐지 | — |
+| K-FinHallu (2026.5, KAIST+카뱅) | 금융 RAG | LLM judge 5기준 | 탐지 | CC BY-NC |
+| KCL (EACL 2026) | 판례 | 루브릭 | 법적 추론 | — |
+| KBL (lbox) | 법령/판례 | 지식 QA | 추론 | — |
+| korean-law-mcp (2.2k★) | 법령 | 인용 존재검증 **도구**(벤치 없음) | — | MIT |
 
-## 유명세 경로
+차별 4축: ①법령 closed-set ②judge 없는 결정적 채점 ③탐지가 아닌 생성+인용 ④소형-대형 통제 비교.
 
-- **Open Ko-LLM Leaderboard** 제출 → 상위권이면 화제성 (Upstage SOLAR 사례)
-- 단, 리더보드 오버핏/데이터 오염 주의 — 실사용 품질과 괴리되면 역효과
+## G0 판정
 
-## lm-evaluation-harness 사용 예
+**G0 = 분할(SPLIT)** — 관대 축(faithbench) 통과, 엄격 축(partial) 역전, 헤드라인 미확정.
+정식 판정·마케팅 금지선·재판정 조건·벤치 동결 규칙은 **[`docs/env-verify/g0-verdict.md`](../docs/env-verify/g0-verdict.md)** 참조.
+"소형이 대형을 이긴다"는 재판정(위생 수정 + Qwen3-4B + paired + 다법령) 전까지 마케팅 금지다.
 
-```bash
-pip install lm-eval
-lm_eval --model hf \
-  --model_args pretrained=models/output/merged \
-  --tasks kmmlu,haerae \
-  --device cuda:0 --batch_size auto
-```
+## 벤치 동결 규칙
 
-## K-FaithBench 확장
+faithbench v0.1 / faithbench_partial v0.1 **동결**. 다음 벤치 변형(의미 채점·다중 gold 등)은
+**외부 공개물 1개 출하 이후에만** 착수한다(g0-verdict.md §7). 지표 동결 후에만 모델 비교 주장 허용.
 
-현재 프로토타입은 헌법 seed 코퍼스의 curated 질문을 기본으로 쓴다. 다법령 코퍼스로 키울 때는
-질문셋을 별도 JSON으로 두고 `--questions`로 주입한다.
-
-헌법 seed 코퍼스 전체용 curated 질문셋은 `eval/questions.constitution.json`에 있다.
+## 사용
 
 ```powershell
-python scripts/eval/faithbench.py --questions eval/questions.constitution.json --near --out eval/instances.jsonl
+# 스코어러 자기검증(모델 불요)
+python scripts/eval/citation_verify.py --demo
+python scripts/eval/faithbench.py --demo
+
+# 교차비교(GPU) — 새 실험은 --out으로 기준선 덮어쓰기 방지, transcript 자동 저장
+python scripts/train/run_g0_faithbench.py --questions eval/questions.constitution.json \
+  --k 5 --near --closed-book --out docs/env-verify/g0-faithbench-v2-result.json
+
+# 유의성(paired McNemar 자동 — transcript 있으면)
+python scripts/eval/faithbench_stats.py --result docs/env-verify/g0-faithbench-v2-result.json
 ```
 
-모델 교차비교도 같은 질문셋으로 돌릴 수 있다.
-
-```powershell
-python scripts/train/run_g0_faithbench.py --questions eval/questions.constitution.json --k 5 --near
-```
-
-질문셋 형식은 아래 둘 중 하나다.
+### 질문셋 형식
 
 ```json
-{
-  "헌법 제1조 ①": "대한민국의 국가 형태는 무엇인가?"
-}
+{ "헌법 제1조 ①": "대한민국의 국가 형태는 무엇인가?" }
 ```
-
 ```json
-[
-  {"id": "헌법 제1조 ①", "question": "대한민국의 국가 형태는 무엇인가?"}
-]
+[ {"id": "헌법 제1조 ①", "question": "대한민국의 국가 형태는 무엇인가?"} ]
 ```
 
-`--include-all-corpus`는 질문이 없는 모든 조항을 ID 기반 sanity 질문으로 채우는 옵션이다. 표본 수를
-빠르게 늘리는 smoke에는 유용하지만, 질문에 조항ID가 노출되므로 정식 selection_exact 리포트에는
-curated 질문셋을 우선한다.
+`--include-all-corpus`는 질문 없는 조항을 ID 기반 sanity 질문으로 채우는 smoke 옵션이다.
+질문에 조항ID가 노출되므로 **정식 selection_exact 리포트에는 curated 질문셋만** 쓴다.
+
+## 외부 벤치 정렬 (로드맵)
+
+범용 품질 리더보드(Open Ko-LLM 등) 상위권 추격은 **전략상 폐기**(포화·반감기 극단).
+대신 faithbench를 **HRET(haerae-evaluation-toolkit) 레지스트리 모듈로 기여**해 채택을
+외부 인프라로 부트스트랩하고, K-HALU/K-FinHallu와 **항목 정렬**해 "통합 잣대"로 진입한다.

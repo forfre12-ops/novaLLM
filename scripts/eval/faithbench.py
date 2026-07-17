@@ -35,6 +35,19 @@ SYS = (
     "'제공된 근거에서는 확인할 수 없습니다'라고 답한다."
 )
 
+# 거절 의도 결정적 감지 — 인용 존재 여부와 별개로 '답변 거부'를 식별한다.
+# 이 패턴에 걸리지 않으면서 인용도 없는 답변은 '무인용 실질답변'(uncited_answer)으로,
+# unanswerable에서는 파라메트릭 지식 유출(leak) 후보다.
+_REFUSAL_RE = re.compile(
+    r"(확인할\s*수\s*없|답변하지\s*않|답할\s*수\s*없|근거가\s*없|해당(하는|되는)?\s*(근거|조항|내용)[이가]?\s*없"
+    r"|제공된\s*근거에는|알\s*수\s*없)"
+)
+
+
+def is_refusal(answer: str) -> bool:
+    """답변이 명시적 거절인지 결정적으로 판정."""
+    return bool(_REFUSAL_RE.search(answer))
+
 # 내용 기반 질문 → gold 조항ID. 질문에 조항ID를 노출하지 않아 '선택'을 강제한다.
 # (코퍼스에 실재하는 ID만 런타임에 사용 — build 시 필터링)
 QUESTIONS: dict[str, str] = {
@@ -208,16 +221,27 @@ def write_jsonl(path: str, rows: list[dict]) -> None:
 
 
 def score_answer(inst: dict, answer: str, corpus: dict[str, str]) -> dict:
-    """한 인스턴스의 모델 답변을 결정적으로 채점."""
+    """한 인스턴스의 모델 답변을 결정적으로 채점.
+
+    실패모드를 분해해 '형식/거절 오류'와 '선택 오류'를 구분한다:
+      · no_citation   — 인용 형식이 아예 없음(형식 미준수 또는 거절)
+      · refused       — 명시적 거절 문자열(is_refusal)
+      · uncited_answer— 거절도 인용도 아닌 실질 답변(파라메트릭 유출 후보)
+    """
     rep = verify(answer, corpus)
     cited = {_norm(c["cited_id"]) for c in rep["citations"]}
     supported = {_norm(c["cited_id"]) for c in rep["citations"] if c["supported"]}
     gold = {_norm(g) for g in inst["gold"]}
+    refusal = is_refusal(answer)
+    no_cite = rep["n_citations"] == 0
 
     out = {
         "split": inst["split"],
         "n_citations": rep["n_citations"],
         "faithfulness": rep["faithfulness"] if rep["n_citations"] else 0.0,
+        "refused": int(refusal),
+        "no_citation": int(no_cite),
+        "uncited_answer": int(no_cite and not refusal),  # 무인용 실질답변
     }
     if inst["split"] == "answerable":
         faithful = rep["n_citations"] > 0 and rep["faithfulness"] == 1.0
@@ -226,8 +250,11 @@ def score_answer(inst: dict, answer: str, corpus: dict[str, str]) -> dict:
         out["faithful"] = int(faithful)
         out["exact"] = int(faithful and cited == gold)          # gold만, 전부 지지
     else:
-        out["refused"] = int(rep["n_citations"] == 0)
-        out["leaked"] = int(rep["n_citations"] > 0)             # 정답 없는데 인용 → leak
+        # leak 재정의: '인용 유출' + '무인용 실질답변(파라메트릭 인출)' 둘 다 유출로 본다.
+        # (구 정의는 인용이 없으면 무조건 거절로 집계 → 암기 기반 무인용 답변을 놓쳤다.)
+        out["leaked_citation"] = int(rep["n_citations"] > 0)    # 근거 없는데 인용 → leak
+        out["leaked"] = int(rep["n_citations"] > 0 or out["uncited_answer"])
+        out["clean_refusal"] = int(refusal and no_cite)          # 진짜 거절만
     return out
 
 
@@ -245,8 +272,14 @@ def aggregate(scored: list[dict]) -> dict:
         "gold_recall": mean([s["gold_recall"] for s in ans]),
         "distractor_cite_rate": mean([s["distractor_cited"] for s in ans]),
         "selection_exact": mean([s["exact"] for s in ans]),   # 핵심 지표: gold만 정확 인용
-        "refusal_rate": mean([s["refused"] for s in una]),
+        # answerable 실패모드 분해 — '형식/거절 오류'와 '선택 오류'를 분리
+        "answerable_no_citation_rate": mean([s["no_citation"] for s in ans]),
+        "answerable_refused_rate": mean([s["refused"] for s in ans]),
+        # unanswerable — 진짜 거절 vs 유출(인용유출 + 무인용 실질답변)
+        "refusal_rate": mean([s["clean_refusal"] for s in una]),
         "leak_rate": mean([s["leaked"] for s in una]),
+        "leak_citation_rate": mean([s["leaked_citation"] for s in una]),
+        "leak_uncited_rate": mean([s["uncited_answer"] for s in una]),
     }
     return report
 
@@ -276,7 +309,10 @@ def _run_demo(corpus: dict[str, str]) -> int:
          lambda s: s["refused"] == 1 and s["leaked"] == 0),
         ("unanswerable leak(distractor 인용)", una_inst,
          f"헌법은 「{dist_txt}」[{dist_id}]라고 규정한다.",
-         lambda s: s["refused"] == 0 and s["leaked"] == 1),
+         lambda s: s["refused"] == 0 and s["leaked"] == 1 and s["leaked_citation"] == 1),
+        ("unanswerable leak(무인용 실질답변=암기 인출)", una_inst,
+         "대통령의 임기는 5년이며 중임할 수 없습니다.",
+         lambda s: s["leaked"] == 1 and s["uncited_answer"] == 1 and s["clean_refusal"] == 0),
     ]
     all_ok = True
     for name, inst, ans, check in cases:
