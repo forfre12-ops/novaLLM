@@ -19,6 +19,7 @@ jobs:
           python scripts/eval/citation_verify.py --demo
           python scripts/eval/faithbench.py --demo
           python scripts/eval/faithbench_partial.py --demo
+          python scripts/eval/power_analysis.py --base 0.387 --target 0.742
       - name: Law corpus parser smoke
         run: |
           python scripts/data/fetch_law.py --smoke

@@ -120,3 +120,11 @@ python scripts/eval/faithbench_partial.py --corpus data/processed/laws.json --it
 3. `data/processed/laws.json` 생성
 4. smoke questions로 runner end-to-end 확인
 5. curated 다법령 질문셋 작성 및 정식 G0 재판정
+
+검정력 planning은 아래 명령으로 갱신한다.
+
+```powershell
+python scripts/eval/power_analysis.py --base 0.387 --target 0.742
+```
+
+현재 요약은 `docs/env-verify/power-report.md`에 둔다.
