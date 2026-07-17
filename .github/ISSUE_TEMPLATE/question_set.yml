@@ -1,0 +1,29 @@
+name: Question set
+description: Propose curated faithbench or partial-span questions
+title: "[questions] "
+labels: ["data", "questions"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Question type
+      options:
+        - faithbench answerable
+        - partial tight-span
+        - unanswerable/refusal
+    validations:
+      required: true
+  - type: textarea
+    id: items
+    attributes:
+      label: Items
+      description: Include source IDs and gold spans where applicable.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: Commands run, or explanation of manual checks.
+      render: powershell

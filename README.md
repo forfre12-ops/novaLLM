@@ -45,6 +45,11 @@ GPU/API 키 없이 공개 repo의 핵심 경로를 확인한다.
 python scripts/smoke.py
 ```
 
+## 기여
+
+재현 결과, parser 버그, 질문셋 제안은 GitHub issue template을 사용한다.
+기여 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)를 따른다.
+
 ## 구조
 
 | 경로 | 내용 | git |
