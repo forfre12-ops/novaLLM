@@ -4,7 +4,7 @@ faithbench_partial 하네스로, '조문 통째 복사'가 페널티를 받는 c
 기준에서 각 모델을 채점한다. 근거충실 인용의 더 엄격한 형태(질문에 해당하는 부분만
 정확히 인용)에서도 소형 FT가 대형 base를 앞서는지 본다.
 
-공정성: base엔 few-shot(부분 인용 형식 예시 + 거절), FT는 zero-shot. 결정적 채점.
+공정성: base엔 few-shot(허구 예시법의 부분 인용 형식 예시 + 거절), FT는 zero-shot. 결정적 채점.
 
     python scripts/train/run_g0_partial.py --k 5 --near
 """
@@ -26,18 +26,25 @@ from eval.faithbench_partial import (  # noqa: E402
 )
 from train.run_g0_faithbench import free, gen, load_base  # noqa: E402
 
+_FS_LAW = {
+    "예시법 제1조": "이 법은 부분 인용 형식의 예시를 목적으로 한다.",
+    "예시법 제2조": "인용문은 질문에 해당하는 부분만 원문 그대로 옮겨야 한다.",
+    "예시법 제3조": "근거에 없는 사항은 답변하지 않는다.",
+}
+
 
 def few_shot_msgs(corpus: dict[str, str]) -> list[dict]:
-    """base용 few-shot: 조문 전체가 아니라 '질문에 해당하는 부분만' 인용하는 예시."""
-    g = "헌법 제8조 ①"  # "정당의 설립은 자유이며, 복수정당제는 보장된다." (부분-span 평가셋과 무관)
-    d1, d1t = "헌법 제7조 ①", corpus["헌법 제7조 ①"]
-    d2, d2t = "헌법 제18조", corpus["헌법 제18조"]
-    ctx1 = f"[근거]\n1) {d1}: {d1t}\n2) {g}: {corpus[g]}\n3) {d2}: {d2t}"
+    """base용 few-shot: 평가 코퍼스와 무관한 허구법으로 부분 인용 형식만 시연."""
+    del corpus
+    g, gt = "예시법 제2조", _FS_LAW["예시법 제2조"]
+    d1, d1t = "예시법 제1조", _FS_LAW["예시법 제1조"]
+    d2, d2t = "예시법 제3조", _FS_LAW["예시법 제3조"]
+    ctx1 = f"[근거]\n1) {d1}: {d1t}\n2) {g}: {gt}\n3) {d2}: {d2t}"
     ctx2 = f"[근거]\n1) {d1}: {d1t}\n2) {d2}: {d2t}"
     return [
-        {"role": "user", "content": f"{ctx1}\n\n질문: 복수정당제 보장은 어떻게 규정되는가?"},
-        {"role": "assistant", "content": "헌법은 「복수정당제는 보장된다.」[헌법 제8조 ①]라고 규정하고 있습니다."},
-        {"role": "user", "content": f"{ctx2}\n\n질문: 대통령의 임기는 몇 년인가?"},
+        {"role": "user", "content": f"{ctx1}\n\n질문: 인용문은 어느 범위만 옮겨야 하는가?"},
+        {"role": "assistant", "content": f"「질문에 해당하는 부분만」[{g}] 인용해야 합니다."},
+        {"role": "user", "content": f"{ctx2}\n\n질문: 이 법의 벌칙 조항은 무엇인가?"},
         {"role": "assistant", "content": "제공된 근거에서는 확인할 수 없습니다."},
     ]
 

@@ -1,78 +1,98 @@
 # G0 종합 판정문 (분할 판정) — 2026-07-17
 
-> 이 문서는 G0 게이트의 **공식 판정**이다. faithbench(관대 축) 통과와 partial(엄격 축)
-> 역전이 공존하는 '분할 상태'를, 재학습이 자기 벤치를 이긴 뒤 소급 정당화하는 경로를
-> 차단하기 위해 **판정을 지금 확정**한다. 다각도 리뷰(2026-07-17, 24-에이전트, 발견 전부
-> 코드 대조 CONFIRMED)의 결론을 반영한다.
+> 이 문서는 G0 게이트의 **공식 판정**이다. v0.2 위생 재평가까지 반영한다.
+> 핵심은 "소형이 대형을 이긴다"를 확정하는 것이 아니라, 관대 선택축과 엄격 부분-span축이
+> 서로 다른 실패모드를 드러낸다는 점이다.
 
 ## 1. 사전등록 사양 대비 현재 실측의 지위
 
 실행계획 TA-12(정식 G0)의 사전등록 임계는 **파인튜닝된 2~4B grounder vs base 7~14B,
-primary=citation exact-match, margin Δ≥+2pt & bootstrap 95% CI 하한>0**이다.
-현재까지의 실측은 3가지가 사양과 어긋난다:
+primary=citation exact-match, margin Δ≥+2pt & bootstrap/paired 95% CI 하한>0**이다.
+
+현재 실측은 여전히 사양과 어긋난다.
 
 | 항목 | 사전등록 | 실측 | 판정 |
 |---|---|---|---|
 | 모델 크기 | 2~4B(Qwen3-4B/Mi:dm Mini) | **Qwen2.5-1.5B** | 사양 밖 |
-| 학습 데이터 | teacher 합성 파일럿 1~2만 | 결정적 수작업 98건 | 사양 밖(단 오염 0로 오히려 클린) |
-| 통계 | bootstrap/paired | unpaired Wilson/Newcombe | 사양 밖(paired 재계산 필요) |
+| 학습 데이터 | teacher 합성 파일럿 1~2만 | 결정적 수작업 소규모 | 사양 밖(단 오염 0로 클린) |
+| 통계 | paired/CI | v0.2에서 paired McNemar 확보 | 일부 충족 |
+| 코퍼스 | 다법령 확장 예정 | 헌법 제1~39조 | 사양 밖 |
 
-**따라서 현재 실측은 정식 G0가 아니라 G0-pre(프리프로브) 수준이다.** 커밋 메시지의
-"진짜 G0" 명명은 과대이며, 이 판정문이 정정한다.
+따라서 현재 실측은 **정식 G0가 아니라 G0-pre+위생 재판정**이다.
 
-## 2. 축별 실측 (동결 스코어러 v0.1 기준)
+## 2. v0.2 위생 재평가 결과
 
-- **관대 축 — faithbench(선택+substring 채점):** FT 1.5B `selection_exact` 0.742 >
-  base 7B 0.591 (overall Δ+0.151, 95% CI 0.015~0.279, p=0.029; unseen 0.778 vs 0.444).
-  → 사전등록 수치 임계는 **통과**.
-- **엄격 축 — faithbench_partial(char-span P/R/F1):** base 7B `span_f1` 0.529 ≥
-  FT 1.5B 0.448, precision 0.471 vs 0.360 (n=14). → **역전**.
+반영된 위생 수정:
 
-## 3. 확인된 혼재변수 (헤드라인을 미확정 상태로 두는 이유)
+- few-shot 정답 노출 제거(허구 예시법)
+- scorer v0.2(줄바꿈 인용·문자 변형 정규화)
+- per-instance transcript 저장
+- paired exact McNemar + Holm 보정
+- closed-book 암기 프로브
+- leak 재정의(무인용 실질답변 포함)
 
-1. **심판-선수 순환 / 포맷 혼재:** FT 어댑터의 학습 gold가 채점기 요구 포맷
-   (`「원문」[ID]`, run_g0_pilot.py:55) 그대로다. `selection_exact`가 '근거충실도'인지
-   '포맷 순응도'인지 현재 데이터로 분리 불가(인스턴스별 답변 미저장이었음 → 위생 수정으로 해소).
-2. **paired 미검증:** unpaired가 '보수적'이라는 가정은 미검증. exact McNemar 재계산 시
-   불일치쌍 크기에 따라 p가 0.044~0.070으로 유의성을 잃을 수 있음(faithbench_stats.py로 실증).
-3. **오염 미통제:** 헌법은 최다 암기 텍스트. closed-book 프로브 부재로 grounding vs recall 미분리.
-4. **partial n=14:** f1_ok=0.7 임계가 통째복사 f1 0.66~0.67 결정경계에 걸림 → 방향성 신호일 뿐
-   통계적 뒤집힘 아님.
+### 관대 축 — faithbench(selection_exact)
 
-## 4. 판정
+`docs/env-verify/g0-faithbench-v02-result.json`
 
-**G0 = "분할(SPLIT)" — 관대 축 통과 / 엄격 축 역전 / 헤드라인 미확정.**
+- FT 1.5B: `selection_exact 0.742`
+- base 7B: `selection_exact 0.387`
+- paired McNemar: FT-only 40, base-only 7, diff +0.355, Holm 후 유의
+- unseen 18문항: FT 0.778 > base 7B 0.444
+- closed-book recall은 FT 0.032, base 7B 0.043으로 낮음 → 단순 암기 설명은 약함
 
-전략 문서 ⑤(strategy.md:113)의 미달 분기를 **부분 발동**한다:
-- 서사를 "소형이 대형을 이긴다"에서 **"측정을 소유한다"로 축소**한다(측정 자산은 크기 무관 생존).
-- 단 완전 기각은 아니다(관대 축 유의) → **레시피 교정 1회 재시도**(partial-SFT v2 + Qwen3-4B)
-  후 재판정 여지를 남긴다. 재시도가 엄격 축에서도 재역전되면 축소를 최종 확정한다.
+관대 선택축에서는 소형 FT 우위가 v0.2에서도 유지된다.
 
-## 5. 마케팅 금지선 (hard constraint, 재판정 전까지)
+### 엄격 축 — faithbench_partial(char-span)
 
-다음 표현을 README·모델카드·리포트·커뮤니티 게시에 **사용 금지**:
+`docs/env-verify/g0-partial-v02-result.json`
+
+- FT 1.5B: `partial_exact 0.286`, `span_f1 0.448`, `span_precision 0.360`
+- base 7B: `partial_exact 0.429`, `span_f1 0.394`, `span_precision 0.393`
+
+엄격 부분-span축은 **metric-dependent split**이다. FT는 평균 F1/recall과 gold 선택이 높고,
+base 7B는 partial_exact/precision이 높다. 이 축에서는 "소형 FT 우위"를 단정할 수 없다.
+
+## 3. 판정
+
+**G0 = SPLIT.**
+
+- 관대 선택축: 소형 FT 우위 지지
+- leak/거절축: FT 안정적
+- closed-book: 암기만으로 설명되지는 않음
+- 부분-span축: metric-dependent, 단정 불가
+- 사전등록 크기/코퍼스 조건: 아직 미충족
+
+따라서 전략 문서의 미달 분기를 부분 발동한다.
+
+**서사는 "소형이 대형을 이긴다"가 아니라 "측정을 소유한다"로 축소한다.**
+
+## 4. 마케팅 금지선
+
+재판정 전까지 다음 표현을 README·모델카드·리포트·커뮤니티 게시에 사용 금지:
+
 - "1.5B/소형이 7B/대형을 이긴다" 계열 단정
-- "근거충실도에서 우위" (포맷 혼재 미해소 상태)
-- partial 결과를 "가정이 뒤집혔다"로 단정(→ "우위가 엄격 채점에서 사라진다/구분 불가"로만)
+- "근거충실도에서 대형보다 우위" 단정
+- partial 결과를 한 방향으로 과대해석
 
-허용되는 서사(항상 참·모방 불가):
-> **"우리 잣대는 우리 모델이 지는 것도 잡아냈다"** — 관대한 인용 채점이 통째복사를
-> 보상하고, char-span precision 채점으로 전환하면 그 아티팩트가 드러난다. 자기 모델에
-> 불리한 결과를 스스로 공개한 기록이 심판(referee) 중립성의 행동 증명이다.
+허용되는 서사:
 
-## 6. 재판정에 필요한 선행(사전등록 개정)
+> **"우리 잣대는 우리 모델의 장점과 약점을 모두 드러낸다."**
+> 선택축에서는 FT가 강하고, 부분-span precision에서는 base 7B가 더 낫다.
+> 이 차이를 LLM-judge 없이 결정적으로 보여주는 것이 nova-llm의 자산이다.
 
-재판정 전에 **먼저 개정을 공개 커밋**한다(사후 재량 아닌 사전 개정):
-1. primary를 `selection_exact` 단독 → `selection_exact AND span_precision≥0.6` 복합으로.
-2. 벤치 위생 수정 반영: few-shot 정답 노출 제거(허구 예시법), per-instance transcript,
-   포맷관용 채점(scorer v0.2), closed-book 프로브, leak 재정의.
-3. paired exact McNemar + Holm 보정으로 판정.
-4. 모델을 Qwen3-4B로 상향(사양 밴드 충족) + 데이터 아티팩트 vs 용량 교락 해소(1.5B×4B 매트릭스).
-5. 다법령 N 확장으로 CI 협소화.
+## 5. 재판정 조건
 
-## 7. 벤치 동결 규칙 (표류 방지, hard rule)
+정식 G0 재판정은 아래 조건을 먼저 만족해야 한다.
 
-- **faithbench v0.1 / faithbench_partial v0.1 동결**(스코어러 v0.2는 위생 패치, 버전 기록).
-- 다음 벤치 변형(의미 채점·다중 gold·요약 등)은 **외부 공개물 1개(테크노트·샘플 감사 리포트·
-  생태계 PR) 출하 이후에만** 착수한다. 완벽주의 루프가 G1 출하를 무기한 미루는 것을 규칙으로 차단.
-- '소형 우위' 주장은 **레시피 설계 이전에 동결된 SCORER_VERSION** 기준에서만 허용.
+1. Qwen3-4B 또는 Mi:dm Mini 2~4B로 사전등록 크기 밴드 충족
+2. 다법령 closed-set 코퍼스로 N 확장
+3. primary를 `selection_exact` 단독이 아니라 `selection_exact + span_precision/span_f1 + leak` 복합으로 고정
+4. paired exact McNemar/Holm 보정 및 transcript 공개
+5. closed-book 프로브를 기본 포함
+
+## 6. 벤치 동결 규칙
+
+- `faithbench v0.1`, `faithbench_partial v0.1`, `citation_verify v0.2`를 현 단계 기준으로 동결한다.
+- 다음 벤치 변형(의미 채점·다중 gold·요약 등)은 **외부 공개물 1개** 이후에만 착수한다.
+- G1 전에는 벤치 정교화보다 **다법령 수집·공개·생태계 기여**를 우선한다.

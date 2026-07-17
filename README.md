@@ -1,7 +1,15 @@
 # nova-llm
 
-한국어 LLM 학습 워크스페이스 (QLoRA 파인튜닝 + 모델병합).
+한국어 법령 근거충실도 측정·검증 워크스페이스 (QLoRA 파인튜닝 + 결정적 citation scoring).
 RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
+
+## 공개 산출물
+
+- [`docs/public/citation-fingerprint.md`](docs/public/citation-fingerprint.md): 한국어 법령 인용 행동을
+  선택·부분-span·거절·leak·암기 인출로 나눠 측정하는 공개용 테크노트 초안.
+- [`docs/env-verify/G0-summary.md`](docs/env-verify/G0-summary.md): G0 실험의 단일 결론.
+- [`docs/env-verify/g0-verdict.md`](docs/env-verify/g0-verdict.md): 공식 판정문. 현재 판정은
+  **SPLIT**이며, "소형이 대형을 이긴다"는 단정은 금지한다.
 
 ## 빠른 시작
 

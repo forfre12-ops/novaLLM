@@ -16,9 +16,19 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 Z = 1.959963984540054  # 95%
+
+
+def safe_print(text: str = "") -> None:
+    """Windows cp949 콘솔에서도 통계 리포트 출력이 죽지 않게 출력 불가 문자를 치환."""
+    enc = sys.stdout.encoding or "utf-8"
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode(enc, errors="replace").decode(enc, errors="replace"))
 
 
 def _phi(x: float) -> float:
@@ -148,40 +158,40 @@ def main() -> int:
     c = counts(res)
     ft = "ft_small_zeroshot"
     comparisons = [
-        (ft, "base_large_fewshot", "소형 FT vs 대형 base(7B) — 전략 핵심 가정"),
+        (ft, "base_large_fewshot", "소형 FT vs 대형 base(7B) - 전략 핵심 가정"),
         (ft, "base_small_fewshot", "소형 FT vs 소형 base(파인튜닝 효과)"),
     ]
 
-    print(f"유의성 분석: {args.metric} (unpaired Wilson/Newcombe, α=0.05)")
-    print("주의: 같은 인스턴스 비교 → paired McNemar가 더 강함. unpaired는 '보수적'이란 보장이 없음(가정).\n")
+    safe_print(f"유의성 분석: {args.metric} (unpaired Wilson/Newcombe, alpha=0.05)")
+    safe_print("주의: 같은 인스턴스 비교 -> paired McNemar가 더 강함. unpaired는 '보수적'이란 보장이 없음(가정).\n")
 
     for a, b, title in comparisons:
         if a not in c or b not in c:
             continue
-        print(f"■ {title}")
+        safe_print(f"* {title}")
         for split in ("overall", "unseen", "seen"):
             x1, n1 = c[a][split]
             x2, n2 = c[b][split]
             r = two_prop(x1, n1, x2, n2)
             verdict = "유의(diff CI>0)" if r["sig_05"] else "미유의/불확실"
-            print(
+            safe_print(
                 f"  [{split:<7} n={n1:>2}] FT {x1}/{n1}={r['p1']} {r['ci1']} vs "
                 f"base {x2}/{n2}={r['p2']} {r['ci2']} | "
-                f"Δ={r['diff']:+} CI{r['diff_ci']} p={r['p_value']} → {verdict}"
+                f"diff={r['diff']:+} CI{r['diff_ci']} p={r['p_value']} -> {verdict}"
             )
-        print()
+        safe_print()
 
     # ── paired McNemar (transcript 있으면 정본) + Holm 보정 ──
     tpath = Path(args.transcript) if args.transcript else resp.with_name(resp.stem + "-transcript.jsonl")
     if not tpath.exists():
-        print(f"(paired McNemar 생략 — transcript 없음: {tpath})")
-        print("  run_g0_faithbench.py를 재실행하면 transcript가 저장돼 paired 분석이 가능합니다.")
+        safe_print(f"(paired McNemar 생략 - transcript 없음: {tpath})")
+        safe_print("  run_g0_faithbench.py를 재실행하면 transcript가 저장돼 paired 분석이 가능합니다.")
         return 0
 
     tr = load_transcript(tpath)
     # transcript는 인스턴스별 정오답을 담으므로 overall paired McNemar는 정확하다.
     # (split별 paired는 transcript에 seen/unseen 태그 추가 시 확장 — 현재는 unpaired 표 참고.)
-    print("■ paired exact McNemar (같은 인스턴스, overall) + Holm 보정")
+    safe_print("* paired exact McNemar (같은 인스턴스, overall) + Holm 보정")
     ptests: list[tuple[str, float]] = []
     rows = {}
     for a, b, title in comparisons:
@@ -194,12 +204,12 @@ def main() -> int:
     for title, r in rows.items():
         h = adj[title]
         verdict = "유의(Holm 후)" if h["reject"] else "미유의(Holm 후)"
-        print(
+        safe_print(
             f"  {title}\n"
             f"    n_pairs={r['n_pairs']} FT-only={r['a_only']} base-only={r['b_only']} "
-            f"Δ={r['diff']:+} | p={r['p_value']} p_adj={h['p_adj']} → {verdict}"
+            f"diff={r['diff']:+} | p={r['p_value']} p_adj={h['p_adj']} -> {verdict}"
         )
-    print("\n  주: paired McNemar가 unpaired와 다르면 paired가 정본(같은 인스턴스이므로).")
+    safe_print("\n  주: paired McNemar가 unpaired와 다르면 paired가 정본(같은 인스턴스이므로).")
     return 0
 
 
