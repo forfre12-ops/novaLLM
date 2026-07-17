@@ -110,6 +110,10 @@ python scripts/data/bulk_fetch_laws.py `
 python scripts/data/merge_law_corpora.py `
   --in data/processed/laws/*.json `
   --out data/processed/laws.json
+
+python scripts/data/validate_law_corpus.py `
+  --corpus data/processed/laws.json `
+  --min-entries 200
 ```
 
 ID 충돌이 있고 본문이 다르면 병합은 실패한다. 같은 ID/같은 본문은 중복으로 허용하지 않는다.
@@ -121,6 +125,10 @@ python scripts/data/gen_law_questions.py `
   --corpus data/processed/laws.json `
   --out eval/questions.laws.smoke.json `
   --partial-out eval/questions.partial.laws.smoke.json
+
+python scripts/data/gen_unanswerable_questions.py `
+  --corpus data/processed/laws.json `
+  --out eval/questions.unanswerable.laws.smoke.json
 ```
 
 주의: 이 질문셋은 정식 벤치가 아니라 수집 직후 runner를 태우기 위한 deterministic smoke artifact다.
@@ -131,6 +139,7 @@ python scripts/data/gen_law_questions.py `
 ```powershell
 python scripts/eval/citation_verify.py --corpus data/processed/laws.json --demo
 python scripts/eval/faithbench.py --corpus data/processed/laws.json --questions eval/questions.laws.smoke.json --dump 2
+python scripts/eval/faithbench.py --corpus data/processed/laws.json --questions eval/questions.laws.smoke.json --unanswerable-file eval/questions.unanswerable.laws.smoke.json --dump 2
 python scripts/eval/faithbench_partial.py --corpus data/processed/laws.json --items eval/questions.partial.laws.smoke.json --dump 2
 ```
 

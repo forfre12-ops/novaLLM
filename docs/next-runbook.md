@@ -21,6 +21,7 @@ python scripts/eval/power_analysis.py --base 0.387 --target 0.742
 python scripts/data/fetch_law.py --smoke
 python scripts/data/law_corpus.py --demo
 python scripts/data/verify_law_corpus.py
+python scripts/smoke.py --skip-eval-demos
 ```
 
 ## 2. Add Law API Key
@@ -76,10 +77,17 @@ python scripts/data/merge_law_corpora.py `
   --in data/processed/laws/*.json `
   --out data/processed/laws.json
 
+python scripts/data/validate_law_corpus.py `
+  --corpus data/processed/laws.json
+
 python scripts/data/gen_law_questions.py `
   --corpus data/processed/laws.json `
   --out eval/questions.laws.smoke.json `
   --partial-out eval/questions.partial.laws.smoke.json
+
+python scripts/data/gen_unanswerable_questions.py `
+  --corpus data/processed/laws.json `
+  --out eval/questions.unanswerable.laws.smoke.json
 ```
 
 ## 7. Verify Eval Builders
@@ -88,6 +96,7 @@ python scripts/data/gen_law_questions.py `
 python scripts/eval/faithbench.py `
   --corpus data/processed/laws.json `
   --questions eval/questions.laws.smoke.json `
+  --unanswerable-file eval/questions.unanswerable.laws.smoke.json `
   --dump 2
 
 python scripts/eval/faithbench_partial.py `

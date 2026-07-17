@@ -37,6 +37,14 @@ python scripts/03_eval.py --model checkpoints/sft-run1/lora_adapter
 python scripts/04_merge_export.py --adapter checkpoints/sft-run1/lora_adapter
 ```
 
+## 로컬 스모크
+
+GPU/API 키 없이 공개 repo의 핵심 경로를 확인한다.
+
+```powershell
+python scripts/smoke.py
+```
+
 ## 구조
 
 | 경로 | 내용 | git |
