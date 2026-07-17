@@ -1,6 +1,13 @@
 # --- 대용량 산출물 (절대 커밋 금지) ---
 data/*
 !data/.gitkeep
+# 소형 fixture는 예외 추적: seed 코퍼스 + *_demo 데이터
+!data/seed/
+data/seed/*
+!data/seed/*.json
+!data/processed/
+data/processed/*
+!data/processed/*_demo.jsonl
 models/*
 !models/.gitkeep
 checkpoints/*
