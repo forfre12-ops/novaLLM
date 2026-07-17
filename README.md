@@ -10,6 +10,8 @@ RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
 - [`docs/env-verify/G0-summary.md`](docs/env-verify/G0-summary.md): G0 실험의 단일 결론.
 - [`docs/env-verify/g0-verdict.md`](docs/env-verify/g0-verdict.md): 공식 판정문. 현재 판정은
   **SPLIT**이며, "소형이 대형을 이긴다"는 단정은 금지한다.
+- [`docs/data-pipeline.md`](docs/data-pipeline.md): 국가법령정보 OpenAPI 기반 다법령 코퍼스
+  수집·정규화·질문셋 smoke 경로.
 
 ## 빠른 시작
 
