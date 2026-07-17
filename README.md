@@ -3,6 +3,13 @@
 한국어 법령 근거충실도 측정·검증 워크스페이스 (QLoRA 파인튜닝 + 결정적 citation scoring).
 RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
 
+## 현재 상태
+
+- 공개 초점: 모델 성능 과장이 아니라 **한국어 법령 인용 행동의 결정적 측정**.
+- G0 판정: **SPLIT**. selection 축에서는 FT 1.5B가 강하지만, tight span 축은 metric-dependent.
+- 금지 서사: "소형이 대형을 이긴다"는 단정.
+- 다음 병목: `LAW_API_KEY` 기반 다법령 closed-set 코퍼스 확장.
+
 ## 공개 산출물
 
 - [`docs/public/citation-fingerprint.md`](docs/public/citation-fingerprint.md): 한국어 법령 인용 행동을
@@ -44,6 +51,15 @@ GPU/API 키 없이 공개 repo의 핵심 경로를 확인한다.
 ```powershell
 python scripts/smoke.py
 ```
+
+검증되는 경로:
+
+- scorer demos
+- lawService JSON/XML parser fixtures
+- manifest/bulk fetch dry-run
+- merged law corpus validation
+- smoke answerable/partial/unanswerable question generation
+- faithbench instance builder
 
 ## 기여
 
