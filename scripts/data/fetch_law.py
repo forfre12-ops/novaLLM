@@ -45,7 +45,7 @@ def build_service_url(oc: str, *, mst: str = "", law_id: str = "", target: str =
     params = {"OC": oc, "target": target, "type": "JSON"}
     if mst:
         params["MST"] = mst
-    if law_id:
+    elif law_id:
         params["ID"] = law_id
     return SERVICE_URL + "?" + urlencode(params)
 

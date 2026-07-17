@@ -28,6 +28,8 @@ jobs:
         shell: bash
         run: |
           tmp="$(mktemp -d)"
+          python scripts/data/plan_law_fetch.py --in tests/fixtures/law_search_sample.json --out "$tmp/manifest.json"
+          python scripts/data/bulk_fetch_laws.py --manifest "$tmp/manifest.json" --dry-run
           python scripts/data/law_corpus.py --in tests/fixtures/law_service_sample.json --out "$tmp/law.json"
           python scripts/data/merge_law_corpora.py --in "$tmp/law.json" --out "$tmp/laws.json"
           python scripts/data/gen_law_questions.py --corpus "$tmp/laws.json" --out "$tmp/questions.json" --partial-out "$tmp/questions.partial.json"

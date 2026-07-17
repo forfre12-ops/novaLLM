@@ -27,6 +27,14 @@ python scripts/data/fetch_law.py `
 
 검색 결과에서 `MST` 또는 `ID`를 확인한 뒤 본문을 받는다.
 
+여러 검색 결과를 bulk fetch 대상으로 만들려면 manifest를 생성한다.
+
+```powershell
+python scripts/data/plan_law_fetch.py `
+  --in data/raw/law_search_*.json `
+  --out data/raw/law_manifest.json
+```
+
 ## 3. Fetch And Normalize One Law
 
 ```powershell
@@ -61,6 +69,21 @@ python scripts/data/fetch_law.py `
 ```
 
 ## 4. Merge Multiple Laws
+
+manifest가 있으면 여러 법령을 한 번에 원문/정규화 코퍼스로 저장할 수 있다.
+
+```powershell
+# 키 없이 경로와 URL만 확인
+python scripts/data/bulk_fetch_laws.py `
+  --manifest data/raw/law_manifest.json `
+  --dry-run
+
+# 키가 있으면 실수집
+python scripts/data/bulk_fetch_laws.py `
+  --manifest data/raw/law_manifest.json `
+  --raw-dir data/raw/laws `
+  --corpus-dir data/processed/laws
+```
 
 ```powershell
 python scripts/data/merge_law_corpora.py `
