@@ -1,0 +1,20 @@
+{
+  "eval_n": 18,
+  "results": {
+    "base_1.5B_fewshot": {
+      "ans_faithfulness": 0.556,
+      "ans_target_cited": 0.556,
+      "unans_refusal_rate": 1.0
+    },
+    "ft_1.5B_zeroshot": {
+      "ans_faithfulness": 1.0,
+      "ans_target_cited": 1.0,
+      "unans_refusal_rate": 1.0
+    },
+    "base_7B_fewshot": {
+      "ans_faithfulness": 0.944,
+      "ans_target_cited": 0.944,
+      "unans_refusal_rate": 1.0
+    }
+  }
+}
