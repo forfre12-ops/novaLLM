@@ -185,7 +185,13 @@ def main() -> None:
     model.print_trainable_parameters()
 
     # ── 4) 토큰화(+라벨 마스킹) ──
-    encoded = [encode_example(tok, r["messages"], max_seq) for r in rows]
+    encoded_all = [encode_example(tok, r["messages"], max_seq) for r in rows]
+    encoded = [(ids, labels) for ids, labels in encoded_all if any(label != -100 for label in labels)]
+    dropped = len(encoded_all) - len(encoded)
+    if dropped:
+        print(f"WARN: max_seq_length={max_seq} truncation dropped {dropped} examples with no assistant labels")
+    if not encoded:
+        raise SystemExit("학습 가능한 assistant label이 남아 있지 않습니다. max_seq_length를 늘리거나 데이터를 줄이세요.")
 
     # ── 5) 옵티마이저 + cosine 스케줄 ──
     rng = random.Random(seed)
@@ -206,7 +212,7 @@ def main() -> None:
     model.train()
     torch.cuda.reset_peak_memory_stats()
     print(
-        f"[TRAIN] {epochs}에폭 × {len(rows)}건 | 유효배치 {batch_size}×{accum}={batch_size * accum} | "
+        f"[TRAIN] {epochs}에폭 × {len(encoded)}건 | 유효배치 {batch_size}×{accum}={batch_size * accum} | "
         f"optim step {total_optim_steps} (warmup {warmup_steps}) | grad_ckpt={grad_ckpt}"
     )
     t0 = time.time()
@@ -219,6 +225,10 @@ def main() -> None:
             ids, am, labels = collate(encoded[start:start + batch_size], tok.pad_token_id)
             ids, am, labels = ids.to("cuda"), am.to("cuda"), labels.to("cuda")
             out = model(input_ids=ids, attention_mask=am, labels=labels)
+            if not torch.isfinite(out.loss):
+                print("  WARN non-finite loss skipped")
+                opt.zero_grad(set_to_none=True)
+                continue
             (out.loss / accum).backward()
             win_loss.append(out.loss.item())
             micro += 1

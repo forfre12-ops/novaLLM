@@ -48,3 +48,36 @@ python scripts/02_train_sft.py --config configs/train_law_sft.yaml
 
 The first training run should be treated as a smoke adapter, not a release model.
 
+## Holdout Variant
+
+To avoid training directly on the same answerable IDs used by `eval/laws_runner.smoke.json`, generate a holdout
+variant:
+
+```powershell
+python scripts/data/gen_law_sft.py `
+  --corpus data/processed/laws.json `
+  --out data/processed/law_sft_holdout.jsonl `
+  --max-full 1200 `
+  --max-tight 1200 `
+  --refusal-ratio 0.2 `
+  --exclude-questions eval/laws_runner.smoke.json
+```
+
+This excluded `30` positive IDs and produced:
+
+| label | rows |
+|---|---:|
+| `grounded_full` | 1200 |
+| `grounded_tight` | 1200 |
+| `refusal` | 600 |
+| total | 3000 |
+
+Training:
+
+```powershell
+python scripts/02_train_sft.py --config configs/train_law_holdout.yaml
+```
+
+The training script dropped `46` examples whose assistant labels were fully truncated at `max_seq_length=1536`,
+then trained `2954` rows for two epochs. Peak VRAM was `5.72 GB`.
+

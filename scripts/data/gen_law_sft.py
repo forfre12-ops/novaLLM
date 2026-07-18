@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from eval.citation_verify import load_corpus, verify  # noqa: E402
+from eval.citation_verify import _norm, load_corpus, verify  # noqa: E402
 
 
 SYSTEM_PROMPT = (
@@ -54,6 +54,25 @@ _SENTENCE_RE = re.compile(r"(?<=\.)\s+")
 def load_articles(path: str | Path) -> dict[str, str]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     return {str(k): str(v) for k, v in data.get("articles", data).items()}
+
+
+def load_excluded_ids(path: str | None) -> set[str]:
+    if not path:
+        return set()
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        return {_norm(str(k)) for k in data}
+    if isinstance(data, list):
+        excluded = set()
+        for row in data:
+            if isinstance(row, dict) and "id" in row:
+                excluded.add(_norm(str(row["id"])))
+            elif isinstance(row, str):
+                excluded.add(_norm(row))
+            else:
+                raise SystemExit(f"unsupported exclude row: {row!r}")
+        return excluded
+    raise SystemExit("--exclude-questions must be a JSON object, list[str], or list[{id,...}]")
 
 
 def article_key(cid: str) -> str:
@@ -159,12 +178,17 @@ def main() -> int:
     ap.add_argument("--max-full", type=int, default=0, help="0 means all articles")
     ap.add_argument("--max-tight", type=int, default=0, help="0 means all tight spans")
     ap.add_argument("--refusal-ratio", type=float, default=0.2)
+    ap.add_argument("--exclude-questions", help="Question JSON whose IDs are held out from positive SFT rows")
     ap.add_argument("--seed", type=int, default=3407)
     args = ap.parse_args()
 
     rng = random.Random(args.seed)
-    corpus = load_articles(args.corpus)
-    ids = list(corpus)
+    excluded = load_excluded_ids(args.exclude_questions)
+    full_corpus = load_articles(args.corpus)
+    corpus = {cid: text for cid, text in full_corpus.items() if _norm(cid) not in excluded}
+    if not corpus:
+        raise SystemExit("no training corpus rows left after exclusions")
+    ids = [cid for cid in corpus if _norm(cid) not in excluded]
     rng.shuffle(ids)
     if args.max_full:
         ids = ids[: args.max_full]
@@ -177,6 +201,8 @@ def main() -> int:
 
     tight_candidates: list[tuple[str, str]] = []
     for cid, text in corpus.items():
+        if _norm(cid) in excluded:
+            continue
         for span in split_spans(text):
             tight_candidates.append((cid, span))
     rng.shuffle(tight_candidates)
@@ -211,6 +237,7 @@ def main() -> int:
     n_refusal = sum(1 for r in rows if r["label"] == "refusal")
     print(f"saved: {outp}")
     print(f"rows: full {n_full} + tight {n_tight} + refusal {n_refusal} = {len(rows)}")
+    print(f"excluded positive IDs: {len(excluded)}")
     print("self-consistency: PASS")
     return 0
 
