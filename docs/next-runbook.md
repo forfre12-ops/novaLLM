@@ -131,11 +131,45 @@ Optional GPU smoke training:
 python scripts/02_train_sft.py --config configs/train_law_sft.yaml
 ```
 
-## 9. Next Decision
+## 9. Curated Holdout Evaluation
+
+```powershell
+python scripts/data/build_curated_law_eval.py `
+  --corpus data/processed/laws.json
+
+python scripts/data/gen_law_sft.py `
+  --corpus data/processed/laws.json `
+  --out data/processed/law_sft_curated_holdout.jsonl `
+  --max-full 1200 `
+  --max-tight 1200 `
+  --refusal-ratio 0.2 `
+  --exclude-questions eval/questions.laws.curated.json `
+  --exclude-questions eval/questions.partial.laws.curated.json
+
+python scripts/02_train_sft.py --config configs/train_law_curated_holdout.yaml
+
+python scripts/train/run_g0_faithbench.py `
+  --adapter checkpoints/g0-law-curated-holdout/lora_adapter `
+  --corpus data/processed/laws.json `
+  --questions eval/questions.laws.curated.json `
+  --unanswerable-file eval/questions.unanswerable.laws.curated.json `
+  --k 5 `
+  --out docs/env-verify/law-curated-holdout-faithbench-result.json
+
+python scripts/train/run_g0_partial.py `
+  --adapter checkpoints/g0-law-curated-holdout/lora_adapter `
+  --corpus data/processed/laws.json `
+  --items eval/questions.partial.laws.curated.json `
+  --k 5 `
+  --out docs/env-verify/law-curated-holdout-partial-result.json
+```
+
+## 10. Next Decision
 
 - If corpus parsing fails: patch `scripts/data/law_corpus.py` against the saved raw response.
 - If corpus parses but questions are weak: keep smoke only, then author curated questions.
 - If smoke passes: run GPU evaluation with `scripts/train/run_g0_faithbench.py --corpus data/processed/laws.json`.
 - If SFT smoke data validates: train `configs/train_law_sft.yaml`, then rerun the law runner smoke.
+- If curated holdout passes both selection and partial-span: expand curated set toward 100 answerable + 100 partial before public leaderboard language.
 
 Do not market a model win from smoke questions. Smoke questions only prove the pipeline runs.

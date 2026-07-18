@@ -56,23 +56,28 @@ def load_articles(path: str | Path) -> dict[str, str]:
     return {str(k): str(v) for k, v in data.get("articles", data).items()}
 
 
-def load_excluded_ids(path: str | None) -> set[str]:
-    if not path:
+def load_excluded_ids(paths: list[str] | None) -> set[str]:
+    if not paths:
         return set()
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if isinstance(data, dict):
-        return {_norm(str(k)) for k in data}
-    if isinstance(data, list):
-        excluded = set()
-        for row in data:
-            if isinstance(row, dict) and "id" in row:
-                excluded.add(_norm(str(row["id"])))
-            elif isinstance(row, str):
-                excluded.add(_norm(row))
-            else:
-                raise SystemExit(f"unsupported exclude row: {row!r}")
-        return excluded
-    raise SystemExit("--exclude-questions must be a JSON object, list[str], or list[{id,...}]")
+    excluded = set()
+    for path in paths:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            excluded.update(_norm(str(k)) for k in data)
+            continue
+        if isinstance(data, list):
+            before = len(excluded)
+            for row in data:
+                if isinstance(row, dict) and "id" in row:
+                    excluded.add(_norm(str(row["id"])))
+                elif isinstance(row, str):
+                    excluded.add(_norm(row))
+                else:
+                    raise SystemExit(f"unsupported exclude row: {row!r}")
+            if len(excluded) >= before:
+                continue
+        raise SystemExit("--exclude-questions must be JSON object, list[str], or list[{id,...}]")
+    return excluded
 
 
 def article_key(cid: str) -> str:
@@ -178,7 +183,11 @@ def main() -> int:
     ap.add_argument("--max-full", type=int, default=0, help="0 means all articles")
     ap.add_argument("--max-tight", type=int, default=0, help="0 means all tight spans")
     ap.add_argument("--refusal-ratio", type=float, default=0.2)
-    ap.add_argument("--exclude-questions", help="Question JSON whose IDs are held out from positive SFT rows")
+    ap.add_argument(
+        "--exclude-questions",
+        action="append",
+        help="Question JSON whose IDs are held out from positive/context SFT rows. Repeatable.",
+    )
     ap.add_argument("--seed", type=int, default=3407)
     args = ap.parse_args()
 

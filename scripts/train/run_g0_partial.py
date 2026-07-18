@@ -117,7 +117,7 @@ def main() -> int:
     ft_r, bl = results["ft_small_zeroshot"], results["base_large_fewshot"]
     win = ft_r["partial_exact"] >= bl["partial_exact"] and ft_r["span_f1"] >= bl["span_f1"]
     print("\n  판정:", "소형 FT ≥ 대형 base (tight 부분인용, 가정 지지)" if win else "대형 base 우위")
-    print("  주의: n=14 소표본·단일 법령. span 채점은 통째복사 페널티엔 강하나 의미적 적절성은 미측정.")
+    print(f"  주의: n={len(insts)} 소표본. span 채점은 통째복사 페널티엔 강하나 의미적 적절성은 미측정.")
     print("  → 저장:", outp)
     return 0
 
