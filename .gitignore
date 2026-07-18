@@ -40,6 +40,9 @@ runs/
 mlruns/
 .hf_cache/
 
+# --- 자동 생성 smoke 질문셋 ---
+eval/*.smoke.json
+
 # --- 환경/비밀 ---
 .env
 .env.local
