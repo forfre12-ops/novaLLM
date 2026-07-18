@@ -49,6 +49,8 @@ def wilson(x: int, n: int) -> tuple[float, float, float]:
 
 def two_prop(x1: int, n1: int, x2: int, n2: int) -> dict:
     """unpaired 두-비율 비교: 차이 + Newcombe 95% CI + pooled z-검정 p값."""
+    if n1 == 0 or n2 == 0:
+        return {"valid": False}
     p1, l1, u1 = wilson(x1, n1)
     p2, l2, u2 = wilson(x2, n2)
     diff = p1 - p2
@@ -65,7 +67,9 @@ def two_prop(x1: int, n1: int, x2: int, n2: int) -> dict:
         "p2": round(p2, 3), "ci2": (round(l2, 3), round(u2, 3)),
         "diff": round(diff, 3), "diff_ci": (round(lo, 3), round(hi, 3)),
         "z": round(z, 3), "p_value": round(pval, 4),
-        "sig_05": bool(pval < 0.05 and lo > 0),
+        "sig_05": bool(pval < 0.05 and (lo > 0 or hi < 0)),
+        "direction": "a" if lo > 0 else ("b" if hi < 0 else "none"),
+        "valid": True,
     }
 
 
@@ -173,7 +177,15 @@ def main() -> int:
             x1, n1 = c[a][split]
             x2, n2 = c[b][split]
             r = two_prop(x1, n1, x2, n2)
-            verdict = "유의(diff CI>0)" if r["sig_05"] else "미유의/불확실"
+            if not r["valid"]:
+                safe_print(f"  [{split:<7} n={n1:>2}] skipped (empty split)")
+                continue
+            if r["sig_05"] and r["direction"] == "a":
+                verdict = "유의(FT > base)"
+            elif r["sig_05"] and r["direction"] == "b":
+                verdict = "유의(base > FT)"
+            else:
+                verdict = "미유의/불확실"
             safe_print(
                 f"  [{split:<7} n={n1:>2}] FT {x1}/{n1}={r['p1']} {r['ci1']} vs "
                 f"base {x2}/{n2}={r['p2']} {r['ci2']} | "
