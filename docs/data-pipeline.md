@@ -156,6 +156,24 @@ python scripts/eval/faithbench.py --corpus data/processed/laws.json --questions 
 python scripts/eval/faithbench_partial.py --corpus data/processed/laws.json --items eval/questions.partial.laws.smoke.json --dump 2
 ```
 
+## 7. Generate Deterministic SFT Data
+
+```powershell
+python scripts/data/gen_law_sft.py `
+  --corpus data/processed/laws.json `
+  --out data/processed/law_sft.jsonl `
+  --max-full 1200 `
+  --max-tight 1200 `
+  --refusal-ratio 0.2
+```
+
+This creates full-quote, tight-span, and refusal examples with `k=5` context. Positive examples are
+validated by `citation_verify` before writing. Train with:
+
+```powershell
+python scripts/02_train_sft.py --config configs/train_law_sft.yaml
+```
+
 ## Next Real Work
 
 1. `LAW_API_KEY` 발급

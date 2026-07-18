@@ -46,6 +46,7 @@ def main() -> int:
         questions = t / "questions.json"
         partial = t / "questions.partial.json"
         unanswerable = t / "questions.unanswerable.json"
+        law_sft = t / "law_sft.jsonl"
         run([PY, "scripts/data/plan_law_fetch.py", "--in", "tests/fixtures/law_search_sample.json", "--out", str(manifest)])
         run([PY, "scripts/data/bulk_fetch_laws.py", "--manifest", str(manifest), "--dry-run"])
         run([PY, "scripts/data/bulk_fetch_laws.py", "--manifest", str(manifest), "--response-type", "XML", "--dry-run"])
@@ -58,6 +59,8 @@ def main() -> int:
         run([PY, "scripts/eval/faithbench.py", "--corpus", str(laws), "--questions", str(questions),
              "--unanswerable-file", str(unanswerable), "--dump", "1"])
         run([PY, "scripts/eval/faithbench_partial.py", "--corpus", str(laws), "--items", str(partial), "--dump", "1"])
+        run([PY, "scripts/data/gen_law_sft.py", "--corpus", str(laws), "--out", str(law_sft),
+             "--max-full", "3", "--max-tight", "3", "--refusal-ratio", "0.25"])
 
     print("smoke: PASS")
     return 0
