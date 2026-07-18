@@ -31,6 +31,7 @@ jobs:
         run: |
           tmp="$(mktemp -d)"
           python scripts/data/plan_law_fetch.py --in tests/fixtures/law_search_sample.json --out "$tmp/manifest.json"
+          python scripts/data/plan_law_fetch.py --in tests/fixtures/law_search_sample.json --law-id DEMO1 --out "$tmp/manifest.filtered.json"
           python scripts/data/bulk_fetch_laws.py --manifest "$tmp/manifest.json" --dry-run
           python scripts/data/bulk_fetch_laws.py --manifest "$tmp/manifest.json" --response-type XML --dry-run
           python scripts/data/law_corpus.py --in tests/fixtures/law_service_sample.json --out "$tmp/law.json"

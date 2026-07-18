@@ -79,10 +79,25 @@ def dedupe(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     return out
 
 
+def filter_rows(rows: list[dict[str, str]], *, law_ids: list[str], name_exact: list[str]) -> list[dict[str, str]]:
+    law_id_set = {x.strip() for x in law_ids if x.strip()}
+    name_set = {x.strip().replace(" ", "") for x in name_exact if x.strip()}
+    if not law_id_set and not name_set:
+        return rows
+    out = []
+    for row in rows:
+        name_key = row["law_name"].replace(" ", "")
+        if row.get("law_id") in law_id_set or name_key in name_set:
+            out.append(row)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inputs", nargs="+", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--law-id", action="append", default=[], help="포함할 법령ID. 여러 번 지정 가능")
+    ap.add_argument("--name-exact", action="append", default=[], help="공백 무시 exact 법령명 필터. 여러 번 지정 가능")
     ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args()
 
@@ -92,6 +107,7 @@ def main() -> int:
             raise SystemExit(f"missing input: {path}")
         rows.extend(extract_manifest(path))
     rows = dedupe(rows)
+    rows = filter_rows(rows, law_ids=args.law_id, name_exact=args.name_exact)
     if args.limit:
         rows = rows[: args.limit]
 

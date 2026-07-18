@@ -35,6 +35,19 @@ python scripts/data/plan_law_fetch.py `
   --out data/raw/law_manifest.json
 ```
 
+1차 core corpus처럼 특정 법령만 고정하려면 법령ID 필터를 사용한다.
+
+```powershell
+python scripts/data/plan_law_fetch.py `
+  --in data/raw/law_search_*.json `
+  --law-id 001444 `
+  --law-id 001706 `
+  --law-id 001692 `
+  --law-id 011357 `
+  --law-id 010199 `
+  --out data/raw/law_manifest_core.json
+```
+
 ## 3. Fetch And Normalize One Law
 
 ```powershell

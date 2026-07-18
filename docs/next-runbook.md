@@ -54,8 +54,17 @@ python scripts/data/plan_law_fetch.py `
   --in data/raw/law_search_*.json `
   --out data/raw/law_manifest.json
 
+python scripts/data/plan_law_fetch.py `
+  --in data/raw/law_search_*.json `
+  --law-id 001444 `
+  --law-id 001706 `
+  --law-id 001692 `
+  --law-id 011357 `
+  --law-id 010199 `
+  --out data/raw/law_manifest_core.json
+
 python scripts/data/bulk_fetch_laws.py `
-  --manifest data/raw/law_manifest.json `
+  --manifest data/raw/law_manifest_core.json `
   --dry-run
 ```
 
