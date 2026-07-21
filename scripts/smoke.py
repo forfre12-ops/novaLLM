@@ -62,6 +62,11 @@ def main() -> int:
         run([PY, "scripts/data/gen_law_sft.py", "--corpus", str(laws), "--out", str(law_sft),
              "--max-full", "3", "--max-tight", "3", "--refusal-ratio", "0.25"])
 
+    # Governance guard: curated eval must stay regenerable from the seed and its
+    # holdout SFT leak-free. No-ops (SKIP) when the generated corpus is absent
+    # (e.g. GitHub CI), acts as a hard gate locally where the corpus exists.
+    run([PY, "scripts/data/verify_curated_holdout.py"])
+
     print("smoke: PASS")
     return 0
 

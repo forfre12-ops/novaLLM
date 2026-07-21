@@ -11,10 +11,21 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
 DEFAULT_SPEC = Path("eval/curated_law_seed.json")
+
+# Minimum contiguous article substring (whitespace-normalized chars) that, if it
+# appears in an answerable question, counts as a gold leak. Below this length the
+# overlap is almost always a statute name or common legal phrase (false positive).
+ANSWERABLE_LEAK_MIN_CHARS = 20
+
+
+def _wsnorm(s: str) -> str:
+    """NFC + whitespace-collapse for robust leak/substring guards."""
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFC", s or "")).strip()
 
 
 def load_articles(path: Path) -> dict[str, str]:
@@ -125,6 +136,78 @@ def build_unanswerable(rows: list[Any]) -> list[str]:
     return out
 
 
+def _row_source(row: dict[str, Any]) -> str:
+    """Provenance of a seed row. Untagged rows default to ``curated`` (strict)."""
+    return str(row.get("source", "curated"))
+
+
+def validate_curated_quality(
+    articles: dict[str, str],
+    answerable: list[dict[str, Any]],
+    partial: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Enforce quality guards on hand-curated (``source == curated``) rows.
+
+    The auto-templated subset (``source == auto``) is formulaic and quotes the
+    gold prefix by construction; it is reported but not gated. The curated core
+    is the trustworthy set backing any headline G0, so it must stay leak-free.
+    Raises SystemExit on any curated violation (fail-fast for CI).
+    """
+    violations: list[str] = []
+
+    # --- partial curated: gold-leak / whole-article / duplicate span ---
+    seen_curated_span: set[tuple[str, str]] = set()
+    auto_partial_prefix_leak = 0
+    for row in partial:
+        cid = row["id"]
+        gold = resolve_gold_span(articles, row)
+        gnorm = _wsnorm(gold)
+        qnorm = _wsnorm(row["question"])
+        src = _row_source(row)
+        if src == "auto":
+            if gnorm[:8] and gnorm[:8] in qnorm:
+                auto_partial_prefix_leak += 1
+            continue
+        if gnorm and gnorm in qnorm:
+            violations.append(f"partial gold-leak in question: {cid} / {row['question']!r}")
+        sentences = split_sentences(articles[cid])
+        if len(sentences) > 1 and gnorm == _wsnorm(articles[cid]):
+            violations.append(f"partial whole-article gold on multi-sentence article: {cid}")
+        key = (cid, gnorm)
+        if key in seen_curated_span:
+            violations.append(f"duplicate curated partial gold span: {cid}")
+        seen_curated_span.add(key)
+
+    # --- answerable curated: long article substring leaked into question ---
+    for row in answerable:
+        if _row_source(row) != "curated":
+            continue
+        cid = require_text(row, "id", "answerable")
+        anorm = _wsnorm(articles[cid])
+        qnorm = _wsnorm(row["question"])
+        window = ANSWERABLE_LEAK_MIN_CHARS
+        if any(anorm[i : i + window] in qnorm for i in range(0, max(1, len(anorm) - window + 1))):
+            violations.append(f"answerable article-text leak in question: {cid} / {row['question']!r}")
+
+    if violations:
+        raise SystemExit(
+            "curated-quality guard failed ("
+            + str(len(violations))
+            + "):\n  - "
+            + "\n  - ".join(violations)
+        )
+
+    n_ans_curated = sum(1 for r in answerable if _row_source(r) == "curated")
+    n_par_curated = sum(1 for r in partial if _row_source(r) == "curated")
+    return {
+        "answerable_curated": n_ans_curated,
+        "answerable_auto": len(answerable) - n_ans_curated,
+        "partial_curated": n_par_curated,
+        "partial_auto": len(partial) - n_par_curated,
+        "auto_partial_prefix_leak": auto_partial_prefix_leak,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpus", default="data/processed/laws.json")
@@ -139,6 +222,7 @@ def main() -> int:
     answerable = spec["answerable"]
     partial_rows = spec["partial"]
     assert_ids_exist(articles, answerable, partial_rows)
+    prov = validate_curated_quality(articles, answerable, partial_rows)
 
     questions = build_questions(answerable)
     partial = build_partial_items(articles, partial_rows)
@@ -160,6 +244,16 @@ def main() -> int:
     print(f"saved answerable: {args.questions_out} ({len(questions)})")
     print(f"saved partial: {args.partial_out} ({len(partial)})")
     print(f"saved unanswerable: {args.unanswerable_out} ({len(unanswerable)})")
+    print(
+        "provenance: "
+        f"answerable curated {prov['answerable_curated']} / auto {prov['answerable_auto']}; "
+        f"partial curated {prov['partial_curated']} / auto {prov['partial_auto']} "
+        f"(auto partial gold-prefix hints: {prov['auto_partial_prefix_leak']})"
+    )
+    print(
+        "genuine curated core (headline-eval eligible): "
+        f"answerable {prov['answerable_curated']} / partial {prov['partial_curated']}"
+    )
     target = spec.get("final_target")
     if isinstance(target, dict):
         print(
