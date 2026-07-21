@@ -52,17 +52,31 @@ def read_jsonl(path: str) -> list[dict]:
     return rows
 
 
+def _apply_chat(tok, messages: list[dict], **kwargs):
+    """apply_chat_template with thinking mode disabled.
+
+    Qwen3 injects a ``<think>`` scaffold by default; a citation-grounding SFT must
+    train the plain ``「...」[ID]`` answer, not reasoning traces. ``enable_thinking``
+    is ignored by templates that do not support it (e.g. Qwen2.5), so this is a
+    no-op there and keeps existing 1.5B training identical.
+    """
+    try:
+        return tok.apply_chat_template(messages, enable_thinking=False, **kwargs)
+    except (TypeError, ValueError):
+        return tok.apply_chat_template(messages, **kwargs)
+
+
 def encode_example(tok, messages: list[dict], max_len: int):
     """chat 메시지를 토큰화하고 프롬프트 구간을 -100으로 마스킹.
 
     프롬프트(마지막 assistant 직전까지) + generation prompt = 마스킹,
     마지막 assistant 응답 토큰만 학습 대상. 단일턴/멀티턴 모두 마지막 턴만 학습.
     """
-    prompt_text = tok.apply_chat_template(
-        messages[:-1], add_generation_prompt=True, tokenize=False
+    prompt_text = _apply_chat(
+        tok, messages[:-1], add_generation_prompt=True, tokenize=False
     )
-    full_text = tok.apply_chat_template(
-        messages, add_generation_prompt=False, tokenize=False
+    full_text = _apply_chat(
+        tok, messages, add_generation_prompt=False, tokenize=False
     )
     pids = tok(prompt_text, add_special_tokens=False)["input_ids"]
     fids = tok(full_text, add_special_tokens=False)["input_ids"]

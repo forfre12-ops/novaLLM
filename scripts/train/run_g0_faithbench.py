@@ -94,11 +94,25 @@ def few_shot_msgs(corpus: dict[str, str]) -> list[dict]:
     ]
 
 
+def apply_chat(tok, messages, **kwargs):
+    """apply_chat_template with thinking mode disabled.
+
+    Qwen3 emits a ``<think>`` block by default; with ``max_new_tokens=160`` that
+    budget is spent on reasoning and the citation answer is truncated, silently
+    invalidating the eval. ``enable_thinking`` is ignored by templates that do
+    not support it (e.g. Qwen2.5), so existing 1.5B results are unchanged.
+    """
+    try:
+        return tok.apply_chat_template(messages, enable_thinking=False, **kwargs)
+    except (TypeError, ValueError):
+        return tok.apply_chat_template(messages, **kwargs)
+
+
 def gen(model, tok, messages: list[dict]) -> str:
     import torch
 
-    enc = tok.apply_chat_template(
-        messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
+    enc = apply_chat(
+        tok, messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
     ).to("cuda")
     with torch.no_grad():
         out = model.generate(
@@ -343,18 +357,22 @@ def main() -> int:
             f"{u['gold_recall']:>14}{u['distractor_cite_rate']:>14}"
         )
 
+    # NOTE: G0 = SPLIT. selection_exact is only the lenient axis; the tight-span
+    # precision axis (run_g0_partial) can favor the large base. Do NOT emit a
+    # single-axis "small beats large" verdict here — it violates the g0-verdict
+    # marketing ban. Report the axes descriptively and leave adjudication to the
+    # combined selection + span_precision + leak criteria.
     ft_r, bl = results["ft_small_zeroshot"], results["base_large_fewshot"]
     ftu, blu = by_split["ft_small_zeroshot"]["unseen"], by_split["base_large_fewshot"]["unseen"]
-    win_all = (
-        ft_r["selection_exact"] >= bl["selection_exact"]
-        and ft_r["leak_rate"] <= bl["leak_rate"]
-    )
-    win_unseen = ftu["selection_exact"] >= blu["selection_exact"]
-    print("\n  판정(전체):", "소형 FT >= 대형 base" if win_all else "대형 base 우위")
+    print("\n  대조(selection축, 단정 아님 — span precision·leak과 병기해야 판정):")
     print(
-        "  판정(unseen):",
-        "소형 FT >= 대형 base (친숙도 편향 제거 후에도 유지)" if win_unseen else "대형 base 우위",
+        f"    전체  selection_exact  FT={ft_r['selection_exact']:>6}  base={bl['selection_exact']:>6}"
+        f"  | leak FT={ft_r['leak_rate']:>6} base={bl['leak_rate']:>6}"
     )
+    print(
+        f"    unseen selection_exact FT={ftu['selection_exact']:>6}  base={blu['selection_exact']:>6}"
+    )
+    print("    → tight-span precision은 run_g0_partial.py에서 확인. headline 'small beats large' 금지.")
     if closed_book:
         print("\n===== 암기 프로브(closed-book) — grounding gain =====")
         for name, cb in closed_book.items():
