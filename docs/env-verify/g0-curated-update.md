@@ -2,14 +2,17 @@
 
 Date: 2026-07-18
 
-This note updates the earlier `G0 = SPLIT` judgment with the new curated-holdout seed result.
+This note updates the earlier `G0 = SPLIT` judgment with the 30/30 curated-holdout seed result.
 It does not replace the final G0 verdict yet.
+
+Note: the tracked curated eval set has since expanded to 100 answerable + 100 partial. The numbers
+below are the earlier 30/30 run and need rerun before final benchmark language.
 
 ## Setup
 
 - corpus: `data/processed/laws.json` (`5` laws, `3303` entries)
-- answerable: `eval/questions.laws.curated.json` (`30`)
-- partial-span: `eval/questions.partial.laws.curated.json` (`30`)
+- answerable: `eval/questions.laws.curated.json` (`30` at run time; now expanded to `100`)
+- partial-span: `eval/questions.partial.laws.curated.json` (`30` at run time; now expanded to `100`)
 - unanswerable: `eval/questions.unanswerable.laws.curated.json` (`20`)
 - held-out eval IDs from SFT positive/context rows: `36`
 - adapter: `checkpoints/g0-law-curated-holdout/lora_adapter`
@@ -48,4 +51,3 @@ Keep the claim scoped:
 
 Do not present this as the final benchmark until the curated set expands to at least `100` answerable and `100`
 partial-span items, with broader law coverage.
-

@@ -1,0 +1,31 @@
+# Curated-eval holdout SFT config for the preregistered 2-4B grounder band.
+# Generate data first:
+#   python scripts/data/gen_law_sft.py --corpus data/processed/laws.json --out data/processed/law_sft_curated_holdout.jsonl --exclude-questions eval/questions.laws.curated.json --exclude-questions eval/questions.partial.laws.curated.json
+
+base_model: "Qwen/Qwen3-4B"
+chat_template: "chatml"
+
+train_file: "data/processed/law_sft_curated_holdout.jsonl"
+max_seq_length: 1536
+
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.0
+load_in_4bit: true
+target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+
+batch_size: 1
+grad_accum: 8
+epochs: 2
+learning_rate: 2.0e-4
+weight_decay: 0.01
+warmup_ratio: 0.03
+seed: 3407
+gradient_checkpointing: true
+
+logging_steps: 10
+save_steps: 0
+save_total_limit: 3
+
+output_dir: "checkpoints/g0-law-curated-holdout-qwen3-4b"
+report_to: "none"

@@ -16,8 +16,9 @@ Korean legal grounding into separate behaviors:
 - detecting uncited parametric leakage
 - separating open-book grounding from closed-book memorization
 
-The current prototype uses a closed-set corpus of 93 entries from the Constitution of Korea
-and does not use an LLM judge. Every citation is checked mechanically against the source text.
+The first public prototype used a closed-set corpus of 93 entries from the Constitution of Korea.
+The current local seed has expanded to 5 statutes and 3303 closed-set entries. Neither path uses
+an LLM judge: every citation is checked mechanically against the source text.
 
 ## Why This Exists
 
@@ -30,16 +31,25 @@ This project tries to make those failure modes visible. The core claim is:
 
 ## Current Prototype
 
-Corpus:
+Constitution-only prototype corpus:
 
 - `data/seed/constitution.json`
 - Constitution of Korea, Articles 1-39
 - 93 closed-set article/paragraph entries
 
+Multi-law local seed corpus:
+
+- `data/processed/laws.json` (ignored generated artifact)
+- Constitution, Civil Act, Criminal Act, Personal Information Protection Act, Electronic Financial Transactions Act
+- 3303 closed-set article/paragraph entries
+
 Question sets:
 
 - `eval/questions.constitution.json` — 93 content questions with no explicit article ID hints
 - `eval/questions.partial.constitution.json` — 14 tight-span questions
+- `eval/questions.laws.curated.json` — 100 curated multi-law answerable questions
+- `eval/questions.partial.laws.curated.json` — 100 curated multi-law tight-span questions
+- `eval/questions.unanswerable.laws.curated.json` — 20 curated out-of-corpus questions
 
 Scorers:
 
@@ -140,13 +150,50 @@ This prototype supports these claims:
 3. Fine-tuning strongly improves source-citation behavior on this benchmark.
 4. A single "small beats large" headline is not robust enough.
 
+## Multi-Law Seed Update
+
+After the Constitution-only fingerprint, a 5-law 30/30 curated holdout seed was run with the
+curated IDs excluded from SFT positive/context rows. This was stronger than the original split
+result, but it was still a seed, not the final benchmark.
+
+Result files from that earlier 30/30 seed run:
+
+- `docs/env-verify/law-curated-holdout-report.md`
+- `docs/env-verify/law-curated-holdout-faithbench-result.json`
+- `docs/env-verify/law-curated-holdout-partial-result.json`
+
+Selection result:
+
+| Model | selection_exact | gold_recall | distractor_cite_rate | refusal_rate | leak_rate |
+|---|---:|---:|---:|---:|---:|
+| base 1.5B few-shot | 0.100 | 0.100 | 0.200 | 0.750 | 0.250 |
+| FT 1.5B zero-shot | 0.733 | 0.733 | 0.000 | 1.000 | 0.000 |
+| base 7B few-shot | 0.333 | 0.333 | 0.033 | 0.500 | 0.500 |
+
+Tight-span result:
+
+| Model | partial_exact | span_f1 | span_precision | span_recall | selected_gold |
+|---|---:|---:|---:|---:|---:|
+| base 1.5B few-shot | 0.033 | 0.060 | 0.100 | 0.047 | 0.133 |
+| FT 1.5B zero-shot | 0.533 | 0.526 | 0.521 | 0.533 | 0.867 |
+| base 7B few-shot | 0.333 | 0.413 | 0.446 | 0.414 | 0.500 |
+
+Scoped claim:
+
+> A 1.5B Korean law citation grounder outperformed a 7B base model on a curated 5-law
+> closed-set seed under deterministic citation scoring.
+
+The tracked eval set has since expanded to 100 answerable and 100 partial-span items. The model
+scores above must be rerun on that expanded set, ideally with a 2-4B preregistered grounder,
+before they are presented as a final benchmark.
+
 ## What We Do Not Claim
 
 This prototype does **not** claim:
 
 - that 1.5B models are generally better than 7B models
 - that the benchmark is ready as a public standard
-- that one legal corpus is enough
+- that the current 5-law seed is enough
 - that exact substring citation measures semantic faithfulness completely
 - that tight-span behavior is solved
 
@@ -203,10 +250,10 @@ See `LICENSE`, `LICENSE-DATA`, and `NOTICE`.
 
 ## Next
 
-The next step is not another local benchmark variant. The next step is to move beyond the
-Constitution-only prototype:
+The next step is not another local benchmark variant. The current work should harden the
+multi-law seed into a publishable evaluation package:
 
-1. Expand to multiple statutes through the Korean law OpenAPI.
-2. Preserve provenance and snapshot metadata for every legal text record.
-3. Publish the fingerprint as a small reproducible technical note.
-4. Package the scorer for external evaluation tooling.
+1. Regenerate holdout SFT with the expanded 100/100 eval IDs excluded.
+2. Run the preregistered 2-4B grounder condition, not only the 1.5B smoke adapter.
+3. Publish the fingerprint as a small reproducible technical note with checksums/provenance.
+4. Package the scorer for external evaluation tooling such as HRET.

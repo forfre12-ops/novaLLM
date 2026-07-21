@@ -3,6 +3,10 @@
 아침에 재개할 때 필요한 최소 실행 순서다. 현재 repo는 키 없이 가능한 parser/fixture/CI scaffolding까지
 완료되어 있다.
 
+2026-07-18 이후 로컬 작업공간에는 5법령 코퍼스와 curated-holdout seed 결과가 이미 생성되어 있다.
+`data/processed/laws.json`이 존재하면 2~6단계는 재수집이 필요할 때만 반복하고, 우선 9단계의 curated
+seed 재생성/holdout 재학습과 정식 G0 재판정으로 진행한다.
+
 ## 0. Check Clean State
 
 ```powershell
@@ -135,7 +139,8 @@ python scripts/02_train_sft.py --config configs/train_law_sft.yaml
 
 ```powershell
 python scripts/data/build_curated_law_eval.py `
-  --corpus data/processed/laws.json
+  --corpus data/processed/laws.json `
+  --spec eval/curated_law_seed.json
 
 python scripts/data/gen_law_sft.py `
   --corpus data/processed/laws.json `
@@ -148,20 +153,23 @@ python scripts/data/gen_law_sft.py `
 
 python scripts/02_train_sft.py --config configs/train_law_curated_holdout.yaml
 
+# 정식 G0 재판정용 2~4B band smoke
+python scripts/02_train_sft.py --config configs/train_law_curated_holdout_qwen3_4b.yaml
+
 python scripts/train/run_g0_faithbench.py `
-  --adapter checkpoints/g0-law-curated-holdout/lora_adapter `
+  --adapter checkpoints/g0-law-curated-holdout-qwen3-4b/lora_adapter `
   --corpus data/processed/laws.json `
   --questions eval/questions.laws.curated.json `
   --unanswerable-file eval/questions.unanswerable.laws.curated.json `
   --k 5 `
-  --out docs/env-verify/law-curated-holdout-faithbench-result.json
+  --out docs/env-verify/law-curated-holdout-qwen3-4b-faithbench-result.json
 
 python scripts/train/run_g0_partial.py `
-  --adapter checkpoints/g0-law-curated-holdout/lora_adapter `
+  --adapter checkpoints/g0-law-curated-holdout-qwen3-4b/lora_adapter `
   --corpus data/processed/laws.json `
   --items eval/questions.partial.laws.curated.json `
   --k 5 `
-  --out docs/env-verify/law-curated-holdout-partial-result.json
+  --out docs/env-verify/law-curated-holdout-qwen3-4b-partial-result.json
 ```
 
 ## 10. Next Decision
@@ -170,6 +178,7 @@ python scripts/train/run_g0_partial.py `
 - If corpus parses but questions are weak: keep smoke only, then author curated questions.
 - If smoke passes: run GPU evaluation with `scripts/train/run_g0_faithbench.py --corpus data/processed/laws.json`.
 - If SFT smoke data validates: train `configs/train_law_sft.yaml`, then rerun the law runner smoke.
-- If curated holdout passes both selection and partial-span: expand curated set toward 100 answerable + 100 partial before public leaderboard language.
+- If `eval/curated_law_seed.json` is at 100 answerable + 100 partial: regenerate holdout SFT and rerun model evaluation before public leaderboard language.
+- If `eval/curated_law_seed.json` regresses below 100 answerable + 100 partial: expand that spec first, then regenerate the tracked eval files.
 
 Do not market a model win from smoke questions. Smoke questions only prove the pipeline runs.

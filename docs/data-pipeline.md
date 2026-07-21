@@ -8,6 +8,22 @@
 - `LAW_API_KEY` 없음: URL 구성, parser fixture, scorer smoke까지만 실행한다.
 - `LAW_API_KEY` 있음: search → lawService → normalized corpus → merged corpus → smoke questions 순서로 진행한다.
 
+## Current Local Status
+
+2026-07-18 기준 로컬 작업공간에서는 `LAW_API_KEY` 기반 1차 수집이 이미 완료되어 있다.
+
+- 법령: 대한민국헌법, 민법, 형법, 개인정보 보호법, 전자금융거래법
+- 병합 코퍼스: `data/processed/laws.json` (`3303` entries, git ignored)
+- smoke questions: `eval/questions.laws.smoke.json`, `eval/questions.partial.laws.smoke.json`
+- curated seed: `eval/curated_law_seed.json`
+- curated eval outputs: `eval/questions.laws.curated.json`,
+  `eval/questions.partial.laws.curated.json`, `eval/questions.unanswerable.laws.curated.json`
+- current curated size: `100` answerable + `100` partial + `20` unanswerable
+
+따라서 현재 다음 병목은 키 발급이나 curated seed 확장이 아니라, 확장된 100/100 eval set으로
+holdout SFT와 모델 평가를 다시 실행하고 사전등록 크기 밴드의 2~4B grounder로 정식 G0를
+재판정하는 것이다.
+
 ## 1. Smoke Without Key
 
 ```powershell
@@ -176,11 +192,11 @@ python scripts/02_train_sft.py --config configs/train_law_sft.yaml
 
 ## Next Real Work
 
-1. `LAW_API_KEY` 발급
-2. 5~10개 법령의 `MST` 수집
-3. `data/processed/laws.json` 생성
-4. smoke questions로 runner end-to-end 확인
-5. curated 다법령 질문셋 작성 및 정식 G0 재판정
+1. `python scripts/data/build_curated_law_eval.py --corpus data/processed/laws.json`로 tracked eval 파일을 재생성한다.
+2. 확장된 100/100 eval ID를 제외한 holdout SFT를 다시 만들고 학습한다.
+3. `configs/train_law_curated_holdout_qwen3_4b.yaml`로 Qwen3-4B holdout adapter를 학습한다.
+4. 결과 transcript/checksum/provenance를 공개 산출물과 HRET 패키지 준비에 연결한다.
+5. 추가 법령 확장은 100/100 재판정 후 false-negative/coverage 분석에 맞춰 진행한다.
 
 검정력 planning은 아래 명령으로 갱신한다.
 

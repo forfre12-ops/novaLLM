@@ -6,9 +6,13 @@ RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
 ## 현재 상태
 
 - 공개 초점: 모델 성능 과장이 아니라 **한국어 법령 인용 행동의 결정적 측정**.
-- G0 판정: **SPLIT**. selection 축에서는 FT 1.5B가 강하지만, tight span 축은 metric-dependent.
-- 금지 서사: "소형이 대형을 이긴다"는 단정.
-- 다음 병목: `LAW_API_KEY` 기반 다법령 closed-set 코퍼스 확장.
+- 공식 G0 판정: **SPLIT**. 헌법-only v0.2에서는 selection 축은 FT 1.5B가 강하지만,
+  tight span 축은 metric-dependent.
+- 최신 seed: `LAW_API_KEY`로 5개 법령 closed-set 코퍼스(3303 entries)를 만들고,
+  curated eval set을 100 answerable + 100 partial + 20 unanswerable까지 확장했다.
+- 금지 서사: 최종 벤치 전에는 "소형이 대형을 이긴다"는 일반 단정 금지.
+- 다음 병목: 확장된 100/100 eval set으로 holdout SFT와 모델 평가를 다시 실행하고,
+  사전등록 크기 밴드(Qwen3-4B/Mi:dm Mini 2~4B)로 정식 재판정.
 
 ## 공개 산출물
 
@@ -17,6 +21,9 @@ RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
 - [`docs/env-verify/G0-summary.md`](docs/env-verify/G0-summary.md): G0 실험의 단일 결론.
 - [`docs/env-verify/g0-verdict.md`](docs/env-verify/g0-verdict.md): 공식 판정문. 현재 판정은
   **SPLIT**이며, "소형이 대형을 이긴다"는 단정은 금지한다.
+- [`docs/env-verify/law-curated-holdout-report.md`](docs/env-verify/law-curated-holdout-report.md):
+  5법령 curated holdout seed 결과. 현재 결과 파일은 30/30 seed run이며, eval set은 100/100으로
+  확장되어 재실행 대기 중이다.
 - [`docs/data-pipeline.md`](docs/data-pipeline.md): 국가법령정보 OpenAPI 기반 다법령 코퍼스
   수집·정규화·질문셋 smoke 경로.
 - [`docs/next-runbook.md`](docs/next-runbook.md): `LAW_API_KEY`를 받은 뒤 바로 이어갈 실행 순서.

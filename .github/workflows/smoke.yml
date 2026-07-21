@@ -12,36 +12,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Compile scripts
-        run: python -m compileall -q scripts
-      - name: Scorer demos
-        run: |
-          python scripts/eval/citation_verify.py --demo
-          python scripts/eval/faithbench.py --demo
-          python scripts/eval/faithbench_partial.py --demo
-          python scripts/eval/power_analysis.py --base 0.387 --target 0.742
-      - name: Law corpus parser smoke
-        run: |
-          python scripts/data/fetch_law.py --smoke
-          python scripts/data/fetch_law.py --smoke --response-type XML
-          python scripts/data/law_corpus.py --demo
-          python scripts/data/verify_law_corpus.py
-      - name: Fixture pipeline smoke
-        shell: bash
-        run: |
-          tmp="$(mktemp -d)"
-          python scripts/data/plan_law_fetch.py --in tests/fixtures/law_search_sample.json --out "$tmp/manifest.json"
-          python scripts/data/plan_law_fetch.py --in tests/fixtures/law_search_sample.json --law-id DEMO1 --out "$tmp/manifest.filtered.json"
-          python scripts/data/bulk_fetch_laws.py --manifest "$tmp/manifest.json" --dry-run
-          python scripts/data/bulk_fetch_laws.py --manifest "$tmp/manifest.json" --response-type XML --dry-run
-          python scripts/data/law_corpus.py --in tests/fixtures/law_service_sample.json --out "$tmp/law.json"
-          python scripts/data/validate_law_corpus.py --corpus "$tmp/law.json"
-          python scripts/data/merge_law_corpora.py --in "$tmp/law.json" --out "$tmp/laws.json"
-          python scripts/data/validate_law_corpus.py --corpus "$tmp/laws.json"
-          python scripts/data/gen_law_questions.py --corpus "$tmp/laws.json" --out "$tmp/questions.json" --partial-out "$tmp/questions.partial.json"
-          python scripts/data/gen_unanswerable_questions.py --corpus "$tmp/laws.json" --out "$tmp/questions.unanswerable.json"
-          python scripts/eval/faithbench.py --corpus "$tmp/laws.json" --questions "$tmp/questions.json" --unanswerable-file "$tmp/questions.unanswerable.json" --dump 1
-          python scripts/eval/faithbench_partial.py --corpus "$tmp/laws.json" --items "$tmp/questions.partial.json" --dump 1
-          test -s "$tmp/questions.json"
-          test -s "$tmp/questions.partial.json"
-          test -s "$tmp/questions.unanswerable.json"
+      - name: Local smoke
+        run: python scripts/smoke.py

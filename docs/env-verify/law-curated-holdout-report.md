@@ -4,7 +4,7 @@
 
 ## Summary
 
-5개 법령 코퍼스에서 사람이 고른 curated seed를 만들고, 해당 평가 ID를 SFT positive/context 풀에서 제외한
+5개 법령 코퍼스에서 사람이 고른 30/30 curated seed를 만들고, 해당 평가 ID를 SFT positive/context 풀에서 제외한
 `g0-law-curated-holdout` 어댑터를 학습한 뒤 재평가했다.
 
 결론:
@@ -12,19 +12,24 @@
 - `selection_exact` 축에서 1.5B FT가 7B base보다 유의하게 높다.
 - `partial-span` 축에서도 1.5B FT가 7B base보다 높다.
 - unanswerable leak 제어는 FT가 가장 안정적이다.
-- 다만 `pilot split` 기준 unseen은 4개뿐이므로, 이것은 정식 최종 G0가 아니라 curated-holdout seed 결과다.
+- 다만 `pilot split` 기준 unseen은 4개뿐이므로, 이것은 정식 최종 G0가 아니라 30/30 curated-holdout seed 결과다.
+- 이후 tracked curated eval set은 `100` answerable + `100` partial + `20` unanswerable로 확장되었으며,
+  이 리포트의 모델 점수는 아직 확장본으로 재실행되지 않았다.
 
 ## Curated Eval Files
 
-- answerable: `eval/questions.laws.curated.json` (`30`)
-- partial-span: `eval/questions.partial.laws.curated.json` (`30`)
+- answerable: `eval/questions.laws.curated.json` (`100`; 이 리포트의 점수는 이전 `30` run)
+- partial-span: `eval/questions.partial.laws.curated.json` (`100`; 이 리포트의 점수는 이전 `30` run)
 - unanswerable: `eval/questions.unanswerable.laws.curated.json` (`20`)
+- seed spec: `eval/curated_law_seed.json`
 - builder: `scripts/data/build_curated_law_eval.py`
 
 Builder validation:
 
 ```powershell
-python scripts/data/build_curated_law_eval.py --corpus data/processed/laws.json
+python scripts/data/build_curated_law_eval.py `
+  --corpus data/processed/laws.json `
+  --spec eval/curated_law_seed.json
 python scripts/eval/faithbench.py --corpus data/processed/laws.json --questions eval/questions.laws.curated.json --unanswerable-file eval/questions.unanswerable.laws.curated.json --dump 1
 python scripts/eval/faithbench_partial.py --corpus data/processed/laws.json --items eval/questions.partial.laws.curated.json --dump 1
 ```
@@ -111,6 +116,8 @@ The next public-safe phrasing is:
 > A 1.5B Korean law citation grounder can be trained to outperform a 7B base model on a curated closed-set citation
 > seed, under deterministic citation scoring, while reducing unanswerable leakage.
 
-Do not call this the final benchmark until the curated set reaches at least `100` answerable + `100` partial items and
-multi-law coverage expands beyond the current 5-law corpus.
+Do not call this the final benchmark until the expanded `100` answerable + `100` partial set has been rerun, preferably
+with the preregistered 2-4B grounder condition, and multi-law coverage expands beyond the current 5-law corpus.
 
+The expansion now lives in `eval/curated_law_seed.json`; generated eval files should be rebuilt from that spec rather than
+edited by hand.

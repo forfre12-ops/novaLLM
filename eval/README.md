@@ -36,6 +36,10 @@
 정식 판정·마케팅 금지선·재판정 조건·벤치 동결 규칙은 **[`docs/env-verify/g0-verdict.md`](../docs/env-verify/g0-verdict.md)** 참조.
 "소형이 대형을 이긴다"는 재판정(위생 수정 + Qwen3-4B + paired + 다법령) 전까지 마케팅 금지다.
 
+2026-07-18의 5법령 30/30 curated-holdout seed는 기존 SPLIT보다 강한 신호를 냈지만, 아직 최종 G0는 아니다.
+현재 seed 원본은 `eval/curated_law_seed.json`이며, tracked eval set은 `100` answerable + `100` partial로
+확장되어 다음 holdout SFT/모델 재평가를 기다리는 상태다.
+
 ## 벤치 동결 규칙
 
 faithbench v0.1 / faithbench_partial v0.1 **동결**. 초기 공개물 출하 이후에도 다음 벤치 변형
