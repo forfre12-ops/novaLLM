@@ -153,7 +153,13 @@ python scripts/data/gen_law_sft.py `
 
 python scripts/02_train_sft.py --config configs/train_law_curated_holdout.yaml
 
-# 정식 G0 재판정용 2~4B band smoke
+# 정식 G0 재판정용 2~4B band (Qwen3-4B).
+# 주의: tracked curated eval 100/100은 genuine 30 + auto-template 70의 혼합이며
+# seed의 source 필드로 태깅돼 있다. headline 판정은 genuine 코어(30/30)로만 하고,
+# auto 행(gold prefix 힌트)은 예비용으로만 본다. enable_thinking=False는
+# 02_train_sft / run_g0_faithbench.gen 에 내장돼 Qwen3의 <think> 예산 소진을 자동 차단한다.
+# eval를 바꾸면 반드시 gen_law_sft --exclude-questions로 holdout SFT를 재생성하고
+# python scripts/data/verify_curated_holdout.py 로 drift=0·holdout 누출=0을 확인한다.
 python scripts/02_train_sft.py --config configs/train_law_curated_holdout_qwen3_4b.yaml
 
 python scripts/train/run_g0_faithbench.py `

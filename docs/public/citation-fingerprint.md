@@ -47,9 +47,19 @@ Question sets:
 
 - `eval/questions.constitution.json` — 93 content questions with no explicit article ID hints
 - `eval/questions.partial.constitution.json` — 14 tight-span questions
-- `eval/questions.laws.curated.json` — 100 curated multi-law answerable questions
-- `eval/questions.partial.laws.curated.json` — 100 curated multi-law tight-span questions
+- `eval/questions.laws.curated.json` — 100 multi-law answerable questions
+- `eval/questions.partial.laws.curated.json` — 100 multi-law tight-span questions
 - `eval/questions.unanswerable.laws.curated.json` — 20 curated out-of-corpus questions
+
+Provenance note (honest composition): each 100-item set is **30 hand-curated +
+70 auto-templated** rows, tagged per row in `eval/curated_law_seed.json` via a
+`source` field (`curated` / `auto`). The auto-templated rows quote a short prefix
+of the gold span in the question, so any **headline** model comparison must use
+the genuine hand-curated core (currently 30 answerable / 30 partial, imbalanced
+across the 5 laws), not the full 100. `build_curated_law_eval.py` enforces
+leak/whole-article/duplicate guards on the `curated` rows and prints the genuine
+core size on every build; `verify_curated_holdout.py` keeps the eval regenerable
+from the seed and the holdout SFT leak-free.
 
 Scorers:
 
