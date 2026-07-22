@@ -75,10 +75,12 @@ def main() -> int:
             continue
         print(f"[{idx}/{len(rows)}] fetching {name}: {url}")
         raw = fetch_text(url)
-        if args.response_type == "XML":
-            write_text(raw_out, raw)
-        else:
-            write_json(raw_out, json.loads(raw))
+        # 원문 응답 바이트를 verbatim 보존한다 → raw_sha256 = sha256(raw)이 디스크 파일에서
+        # 그대로 재현되어 제3자가 provenance를 검증할 수 있다. (구버전은 JSON을 재직렬화 저장해
+        # 해시가 디스크와 불일치했다.) JSON도 파싱만 검증하고 원문 그대로 쓴다.
+        if args.response_type != "XML":
+            json.loads(raw)  # 유효 JSON인지 검증(파싱 실패 시 예외)
+        write_text(raw_out, raw)
         corpus = normalize_law_payload(parse_payload(raw), source_url=url, raw_text=raw)
         write_json(corpus_out, corpus)
         if args.sleep:

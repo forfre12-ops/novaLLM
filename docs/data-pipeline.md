@@ -86,6 +86,16 @@ python scripts/data/fetch_law.py `
 
 정규화 결과는 scorer가 바로 읽는 `articles` mapping과 provenance용 `entries`를 함께 가진다.
 
+### raw_sha256 무결성 (provenance 재검증)
+
+각 소스의 `raw_sha256`은 원문 API 응답의 sha256이다. `bulk_fetch_laws`는 이제 응답을 **verbatim**
+저장하므로 `sha256(data/raw/laws/<파일>) == raw_sha256`이 성립해 제3자가 provenance를 재검증할 수 있다.
+`python scripts/data/verify_provenance_chain.py --corpus data/processed/laws.json`로 감사한다(--strict면 게이트).
+
+> **legacy 주의:** 2026-07 스냅샷은 구버전 fetch가 JSON을 **재직렬화**해 저장한 산물이라 `raw_sha256`이
+> 디스크 raw 파일과 불일치한다(검증기가 MISMATCH로 정직 표기). 공개 데이터 패키지 전에 `LAW_API_KEY`로
+> 재수집하면 verbatim 저장되어 검증이 통과한다. 현 스냅샷의 `raw_sha256`은 "원문 응답 기준"으로만 해석해야 한다.
+
 ```json
 {
   "schema_version": "law-corpus-v0.1",
