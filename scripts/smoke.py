@@ -44,6 +44,8 @@ def main() -> int:
     run([PY, "scripts/eval/check_scorer_frozen.py"])
     # 결정적 스코어러·도구 단위 테스트(20+). pytest 불요, 스크립트 모드.
     run([PY, "tests/test_scorers.py"])
+    # OC 키 레닥션 도구 자기검증(공개 배포 전 키 유출 방지 도구).
+    run([PY, "scripts/data/redact_export.py", "--selftest"])
     run([PY, "scripts/data/fetch_law.py", "--smoke"])
     run([PY, "scripts/data/fetch_law.py", "--smoke", "--response-type", "XML"])
     run([PY, "scripts/data/law_corpus.py", "--demo"])

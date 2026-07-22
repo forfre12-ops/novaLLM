@@ -20,6 +20,17 @@ import json
 from pathlib import Path
 
 
+def safe_print(text: str = "") -> None:
+    """Windows cp949 콘솔에서도 출력 불가 문자로 죽지 않게 치환 출력."""
+    import sys as _sys
+    enc = _sys.stdout.encoding or "utf-8"
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode(enc, errors="replace").decode(enc, errors="replace"))
+
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -33,11 +44,11 @@ def main() -> int:
 
     corpus_path = Path(args.corpus)
     if not corpus_path.exists():
-        print(f"verify_provenance_chain: SKIP (no corpus at {corpus_path})")
+        safe_print(f"verify_provenance_chain: SKIP (no corpus at {corpus_path})")
         return 0
     sources = json.loads(corpus_path.read_text(encoding="utf-8")).get("sources", [])
     if not sources:
-        print("verify_provenance_chain: SKIP (corpus에 sources 없음 — 단일 코퍼스일 수 있음)")
+        safe_print("verify_provenance_chain: SKIP (corpus에 sources 없음 — 단일 코퍼스일 수 있음)")
         return 0
 
     raw_dir = Path(args.raw_dir)
@@ -47,24 +58,24 @@ def main() -> int:
         base = Path(s.get("path", "")).name  # 처리본 basename == raw 파일 basename
         raw_file = raw_dir / base
         if not recorded:
-            print(f"  [NO-HASH] {base}: raw_sha256 없음")
+            safe_print(f"  [NO-HASH] {base}: raw_sha256 없음")
             n_missing += 1
             continue
         if not raw_file.exists():
-            print(f"  [MISSING] {base}: raw 파일 없음 ({raw_file})")
+            safe_print(f"  [MISSING] {base}: raw 파일 없음 ({raw_file})")
             n_missing += 1
             continue
         actual = _sha256(raw_file)
         if actual == recorded:
-            print(f"  [MATCH]    {base}")
+            safe_print(f"  [MATCH]    {base}")
             n_match += 1
         else:
-            print(f"  [MISMATCH] {base}: recorded={recorded[:16]}… disk={actual[:16]}…")
+            safe_print(f"  [MISMATCH] {base}: recorded={recorded[:16]}… disk={actual[:16]}…")
             n_mismatch += 1
 
-    print(f"\nprovenance: match {n_match} / mismatch {n_mismatch} / missing {n_missing}")
+    safe_print(f"\nprovenance: match {n_match} / mismatch {n_mismatch} / missing {n_missing}")
     if n_mismatch or n_missing:
-        print("  → 불일치는 대개 구버전 fetch(재직렬화) legacy. LAW_API_KEY로 재수집 시 verbatim 저장되어 일치한다.")
+        safe_print("  → 불일치는 대개 구버전 fetch(재직렬화) legacy. LAW_API_KEY로 재수집 시 verbatim 저장되어 일치한다.")
     if args.strict and (n_mismatch or n_missing):
         return 1
     return 0
