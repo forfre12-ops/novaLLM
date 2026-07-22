@@ -215,6 +215,11 @@ def main() -> int:
         action="store_true",
         help="질문 없는 모든 코퍼스 항목도 ID 기반 sanity 질문으로 포함(정식 리포트용 아님)",
     )
+    ap.add_argument(
+        "--gold-ablation",
+        action="store_true",
+        help="각 answerable 질문의 gold를 근거에서 제거한 in-domain 거절 프로브 추가(leak축 확장)",
+    )
     ap.add_argument("--seed", type=int, default=3407)
     ap.add_argument(
         "--out",
@@ -242,6 +247,7 @@ def main() -> int:
         questions=load_questions(args.questions),
         unanswerable=load_unanswerable(args.unanswerable_file),
         include_all_corpus=args.include_all_corpus,
+        gold_ablation=args.gold_ablation,
     )
     n_ans = sum(1 for i in insts if i["split"] == "answerable")
     n_una = sum(1 for i in insts if i["split"] == "unanswerable")

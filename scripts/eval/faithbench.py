@@ -173,8 +173,14 @@ def build_instances(
     questions: dict[str, str] | None = None,
     unanswerable: list[str] | None = None,
     include_all_corpus: bool = False,
+    gold_ablation: bool = False,
 ) -> list[dict]:
-    """answerable(내용질문+distractor) + unanswerable(distractor만) 인스턴스 생성."""
+    """answerable(내용질문+distractor) + unanswerable(distractor만) 인스턴스 생성.
+
+    gold_ablation=True면, 각 answerable 질문에 대해 gold 조문을 근거에서 제거한
+    in-domain unanswerable(probe_type='gold_ablation')을 추가한다. 표면 법명 단서가
+    없는 하드 거절 프로브라 leak/거절 축을 무비용으로 확장한다. 기존 인스턴스의 rng를
+    교란하지 않도록 마지막에 별도로 생성한다(gold_ablation=False면 출력 byte-불변)."""
     rng = random.Random(seed)
     insts: list[dict] = []
     question_bank = dict(QUESTIONS)
@@ -216,6 +222,7 @@ def build_instances(
             "instance_id": instance_id("unanswerable", [], q, ctx_ids),
             "split": "unanswerable",
             "gold": [],
+            "probe_type": "out_of_corpus",
             "question": q,
             "context_ids": ctx_ids,
             "messages": [
@@ -223,6 +230,30 @@ def build_instances(
                 {"role": "user", "content": f"{_context_block(ctx)}\n\n질문: {q}"},
             ],
         })
+
+    if gold_ablation:
+        # 각 answerable 질문의 gold를 근거에서 제거 → 표면 단서 없는 in-domain 거절 프로브.
+        # 마지막에 생성해 위쪽 인스턴스의 rng draw를 교란하지 않는다.
+        for gold_id, q in question_bank.items():
+            if gold_id not in corpus:
+                continue
+            distractors = _pick_distractors(corpus, gold_id, k, near, rng)
+            ctx = [(d, corpus[d]) for d in distractors]
+            rng.shuffle(ctx)
+            ctx_ids = [c for c, _ in ctx]
+            insts.append({
+                "instance_id": instance_id("unanswerable", [], q, ctx_ids),
+                "split": "unanswerable",
+                "gold": [],
+                "probe_type": "gold_ablation",
+                "source_gold": gold_id,
+                "question": q,
+                "context_ids": ctx_ids,
+                "messages": [
+                    {"role": "system", "content": SYS},
+                    {"role": "user", "content": f"{_context_block(ctx)}\n\n질문: {q}"},
+                ],
+            })
     return insts
 
 
@@ -352,6 +383,11 @@ def main() -> int:
         action="store_true",
         help="질문 없는 모든 코퍼스 항목도 ID 기반 sanity 질문으로 포함(정식 선택평가용 아님)",
     )
+    ap.add_argument(
+        "--gold-ablation",
+        action="store_true",
+        help="각 answerable 질문의 gold를 근거에서 제거한 in-domain 거절 프로브 추가(leak축 확장)",
+    )
     ap.add_argument("--out", help="생성된 벤치 인스턴스를 JSONL로 저장")
     ap.add_argument("--demo", action="store_true", help="모델 없이 스코어러 자기검증")
     ap.add_argument("--dump", type=int, default=0, help="인스턴스 N개 미리보기")
@@ -373,12 +409,14 @@ def main() -> int:
         questions=questions,
         unanswerable=unanswerable,
         include_all_corpus=args.include_all_corpus,
+        gold_ablation=args.gold_ablation,
     )
     n_ans = sum(1 for i in insts if i["split"] == "answerable")
     n_una = sum(1 for i in insts if i["split"] == "unanswerable")
+    n_abl = sum(1 for i in insts if i.get("probe_type") == "gold_ablation")
     print(
         f"인스턴스: answerable {n_ans} + unanswerable {n_una} = {len(insts)} "
-        f"(k={args.k}, near={args.near})"
+        f"(k={args.k}, near={args.near}, gold_ablation={n_abl})"
     )
     if args.out:
         write_jsonl(args.out, insts)

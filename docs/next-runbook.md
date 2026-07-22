@@ -162,12 +162,15 @@ python scripts/02_train_sft.py --config configs/train_law_curated_holdout.yaml
 # python scripts/data/verify_curated_holdout.py 로 drift=0·holdout 누출=0을 확인한다.
 python scripts/02_train_sft.py --config configs/train_law_curated_holdout_qwen3_4b.yaml
 
+# --near: 같은 조 인접 항을 하드 distractor로. --closed-book: 암기 프로브(grounding gain).
+# --gold-ablation: 각 answerable의 gold를 근거에서 빼 표면단서 없는 in-domain 거절 프로브
+#   추가(leak축 N 20→75). closed-book 프롬프트는 법령-무관화됨(헌법 하드코딩 제거).
 python scripts/train/run_g0_faithbench.py `
   --adapter checkpoints/g0-law-curated-holdout-qwen3-4b/lora_adapter `
   --corpus data/processed/laws.json `
   --questions eval/questions.laws.curated.json `
   --unanswerable-file eval/questions.unanswerable.laws.curated.json `
-  --k 5 `
+  --k 5 --near --closed-book --gold-ablation `
   --out docs/env-verify/law-curated-holdout-qwen3-4b-faithbench-result.json
 
 python scripts/train/run_g0_partial.py `
