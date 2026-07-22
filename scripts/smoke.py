@@ -33,6 +33,12 @@ def main() -> int:
         run([PY, "scripts/eval/faithbench.py", "--demo"])
         run([PY, "scripts/eval/faithbench_partial.py", "--demo"])
     run([PY, "scripts/eval/power_analysis.py", "--base", "0.387", "--target", "0.742"])
+    # 재현성 게이트: 공표된 v02 결과가 결정적 스코어러로 재도출되는지 검증(GPU/키 불요).
+    # 스코어러 규칙이 몰래 바뀌면 여기서 깨진다 — '측정을 소유' 신뢰의 기계 강제.
+    run([PY, "scripts/eval/score_predictions.py", "rescore",
+         "--transcript", "docs/env-verify/g0-faithbench-v02-result-transcript.jsonl",
+         "--corpus", "data/seed/constitution.json",
+         "--expect", "docs/env-verify/g0-faithbench-v02-result.json"])
     run([PY, "scripts/data/fetch_law.py", "--smoke"])
     run([PY, "scripts/data/fetch_law.py", "--smoke", "--response-type", "XML"])
     run([PY, "scripts/data/law_corpus.py", "--demo"])

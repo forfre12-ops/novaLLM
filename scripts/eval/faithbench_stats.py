@@ -113,7 +113,8 @@ def load_transcript(path: Path) -> dict[str, dict[str, int]]:
         r = json.loads(line)
         if r.get("split") != "answerable":
             continue
-        key = str(r.get("gold"))  # answerable은 gold가 인스턴스당 유일
+        # 신규 transcript는 안정 instance_id로 페어링, 구본은 gold 문자열로 폴백.
+        key = r.get("instance_id") or str(r.get("gold"))
         by_model.setdefault(r["model"], {})[key] = int(r.get("exact", 0))
     return by_model
 

@@ -20,6 +20,7 @@ cited-ID 집합을 gold 집합과 비교(정밀도/재현율). 두 split:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import re
@@ -28,6 +29,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from citation_verify import _norm, load_corpus, verify  # noqa: E402
+
+
+def instance_id(split: str, gold: list[str], question: str, context_ids: list[str]) -> str:
+    """제출·재채점용 안정 인스턴스 키. 동일 (corpus, seed, k, near)면 재현된다.
+
+    split|gold|question|context_ids를 정규 직렬화해 sha1. 답변 제출자가 이 id로
+    자기 답변을 인스턴스에 결합하고, 채점자는 로컬에서 동일 id를 재생성해 조인한다.
+    """
+    canon = "\x1f".join([split, ",".join(gold), question, ",".join(context_ids)])
+    return hashlib.sha1(canon.encode("utf-8")).hexdigest()[:16]
 
 SYS = (
     "너는 제공된 근거 조항만 사용해 답한다. 여러 근거 중 질문에 해당하는 조항을 찾아 "
@@ -184,12 +195,14 @@ def build_instances(
             if gold_id in QUESTIONS or (questions and gold_id in questions)
             else "id_fallback"
         )
+        ctx_ids = [c for c, _ in ctx]
         insts.append({
+            "instance_id": instance_id("answerable", [gold_id], q, ctx_ids),
             "split": "answerable",
             "gold": [gold_id],
             "question": q,
             "question_source": question_source,
-            "context_ids": [c for c, _ in ctx],
+            "context_ids": ctx_ids,
             "messages": [
                 {"role": "system", "content": SYS},
                 {"role": "user", "content": f"{_context_block(ctx)}\n\n질문: {q}"},
@@ -200,6 +213,7 @@ def build_instances(
         ctx_ids = rng.sample(all_ids, min(k, len(all_ids)))
         ctx = [(c, corpus[c]) for c in ctx_ids]
         insts.append({
+            "instance_id": instance_id("unanswerable", [], q, ctx_ids),
             "split": "unanswerable",
             "gold": [],
             "question": q,

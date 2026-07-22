@@ -132,6 +132,7 @@ def eval_model(model, tok, insts, corpus, fs):
         msgs = [system] + (fs if fs else []) + [user]
         ans = gen(model, tok, msgs)
         s = score_answer(inst, ans, corpus)
+        s["instance_id"] = inst.get("instance_id")
         s["gold"] = inst["gold"][0] if inst["gold"] else None
         s["question"] = inst["question"]
         s["context_ids"] = inst["context_ids"]
@@ -147,7 +148,9 @@ def closed_book_probe(model, tok, insts, corpus) -> dict:
     selection_exact와의 차이가 'grounding gain'(제공 근거를 실제로 읽는 정도)이다.
     (redteam 감사: '헌법 암기 confound'를 데이터로 선제 방어.)
     """
-    sys_free = "질문에 대한민국 헌법 조문을 근거로 답하라. 해당 조문의 원문을 그대로 인용하라."
+    # 법령-무관 프롬프트: 5법령 curated 런에서 '헌법' 하드코딩은 다른 4개 법령의
+    # verbatim recall을 과소측정해 grounding gain(open-book − closed-book)을 부풀린다.
+    sys_free = "질문에 해당하는 법령 조문의 원문을 그대로 인용해 답하라."
     recalled = 0
     n = 0
     for inst in insts:
