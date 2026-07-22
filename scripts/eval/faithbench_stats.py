@@ -135,6 +135,28 @@ def paired_mcnemar(tr: dict[str, dict[str, int]], a: str, b: str, keys: set[str]
     }
 
 
+def abstention_operating_point(res: dict) -> dict[str, dict]:
+    """거절/유출 트레이드오프 operating point — '전부 거절하면 만점' 게이밍을 지표로 봉쇄.
+
+    두 축을 함께 본다: unanswerable에서 올바로 거절(refusal_rate)하되, answerable에서
+    과잉거절(answerable_refused_rate)하지 않아야 한다. Youden's J = refusal_rate −
+    answerable_refused_rate 는 두 축을 동시에 만족할 때만 커진다. 전부 거절/전부 응답은
+    J≈0으로 무너진다. leak_rate도 병기해 '거절 대신 유출'을 노출한다.
+    """
+    out: dict[str, dict] = {}
+    for m, agg in res.get("results", {}).items():
+        refuse_una = agg.get("refusal_rate", 0.0)          # unanswerable에서 진짜 거절(맞음)
+        over_refuse = agg.get("answerable_refused_rate", 0.0)  # answerable에서 거절(틀림)
+        out[m] = {
+            "abstain_when_should": round(refuse_una, 3),
+            "over_refuse_answerable": round(over_refuse, 3),
+            "youden_j": round(refuse_una - over_refuse, 3),
+            "leak_rate": round(agg.get("leak_rate", 0.0), 3),
+            "leak_parametric_rate": round(agg.get("leak_parametric_rate", 0.0), 3),
+        }
+    return out
+
+
 def counts(res: dict) -> dict:
     """result json → 모델별 (overall/seen/unseen)의 exact 카운트(정수)."""
     out = {}
@@ -223,6 +245,17 @@ def main() -> int:
             f"diff={r['diff']:+} | p={r['p_value']} p_adj={h['p_adj']} -> {verdict}"
         )
     safe_print("\n  주: paired McNemar가 unpaired와 다르면 paired가 정본(같은 인스턴스이므로).")
+
+    # ── 거절/유출 operating point (전부-거절 게이밍 봉쇄) ──
+    aop = abstention_operating_point(res)
+    if aop:
+        safe_print("\n* 거절/유출 operating point (Youden J = 올바른거절 − 과잉거절; 전부거절/전부응답은 J≈0)")
+        safe_print(f"  {'모델':<22}{'abstain↑':>10}{'over_refuse↓':>14}{'youden_J↑':>11}{'leak↓':>8}{'param↓':>8}")
+        for m, v in aop.items():
+            safe_print(
+                f"  {m:<22}{v['abstain_when_should']:>10}{v['over_refuse_answerable']:>14}"
+                f"{v['youden_j']:>11}{v['leak_rate']:>8}{v['leak_parametric_rate']:>8}"
+            )
     return 0
 
 
