@@ -51,5 +51,67 @@
   },
   "citation_verify_version": "0.2",
   "faithbench_version": "0.2",
+  "partial": {
+    "aggregate": {
+      "n": 4,
+      "partial_exact": 0.25,
+      "selected_gold": 0.75,
+      "span_f1": 0.414,
+      "span_ok": 0.25,
+      "span_precision": 0.372,
+      "span_recall": 0.5
+    },
+    "cases": {
+      "distractor": {
+        "distractor_cited": 1,
+        "gold": "헌법 제10조",
+        "n_citations": 1,
+        "partial_exact": 0,
+        "selected_gold": 0,
+        "span_f1": 0.0,
+        "span_ok": 0,
+        "span_precision": 0.0,
+        "span_recall": 0.0,
+        "split": "partial"
+      },
+      "exact_span": {
+        "distractor_cited": 0,
+        "gold": "헌법 제10조",
+        "n_citations": 1,
+        "partial_exact": 1,
+        "selected_gold": 1,
+        "span_f1": 1.0,
+        "span_ok": 1,
+        "span_precision": 1.0,
+        "span_recall": 1.0,
+        "split": "partial"
+      },
+      "whole_article_copy": {
+        "distractor_cited": 0,
+        "gold": "헌법 제10조",
+        "n_citations": 1,
+        "partial_exact": 0,
+        "selected_gold": 1,
+        "span_f1": 0.656,
+        "span_ok": 0,
+        "span_precision": 0.489,
+        "span_recall": 1.0,
+        "split": "partial"
+      },
+      "wrong_clause": {
+        "distractor_cited": 0,
+        "gold": "헌법 제10조",
+        "n_citations": 1,
+        "partial_exact": 0,
+        "selected_gold": 1,
+        "span_f1": 0.0,
+        "span_ok": 0,
+        "span_precision": 0.0,
+        "span_recall": 0.0,
+        "split": "partial"
+      }
+    },
+    "partial_version": "0.1"
+  },
   "source_transcript": "docs/env-verify/g0-faithbench-v02-result-transcript.jsonl"
 }
