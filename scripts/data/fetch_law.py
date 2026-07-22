@@ -86,7 +86,9 @@ def write_json(path: str | Path, data: dict) -> None:
 def write_text(path: str | Path, text: str) -> None:
     outp = Path(path)
     outp.parent.mkdir(parents=True, exist_ok=True)
-    outp.write_text(text, encoding="utf-8")
+    # newline="" 로 개행 변환(\n→\r\n) 차단 → 디스크 바이트 = text.encode("utf-8").
+    # 이래야 raw_sha256 = sha256(raw)가 저장 파일에서 그대로 재현된다(provenance 무결성).
+    outp.write_text(text, encoding="utf-8", newline="")
     safe_print(f"saved: {outp}")
 
 
@@ -137,10 +139,10 @@ def main() -> int:
         )
         safe_print("fetching service: " + url)
         raw = fetch_text(url)
-        if args.response_type == "XML":
-            write_text(args.raw_out, raw)
-        else:
-            write_json(args.raw_out, json.loads(raw))
+        # 원문을 verbatim 저장 → raw_sha256 재현(재직렬화 금지). JSON은 파싱만 검증.
+        if args.response_type != "XML":
+            json.loads(raw)
+        write_text(args.raw_out, raw)
         if args.corpus_out:
             corpus = normalize_law_payload(parse_payload(raw), source_url=url, raw_text=raw)
             write_json(args.corpus_out, corpus)

@@ -55,8 +55,13 @@ def main() -> int:
     n_match = n_mismatch = n_missing = 0
     for s in sources:
         recorded = s.get("raw_sha256", "")
-        base = Path(s.get("path", "")).name  # 처리본 basename == raw 파일 basename
-        raw_file = raw_dir / base
+        # 처리본은 항상 .json이지만 raw는 .xml일 수 있다 → stem으로 매칭(확장자 무관).
+        stem = Path(s.get("path", "")).stem
+        cands = sorted(raw_dir.glob(f"{stem}.*"))
+        if recorded and len(cands) > 1:  # 여러 후보면 기록 해시와 일치하는 것 우선
+            cands.sort(key=lambda p: _sha256(p) != recorded)
+        raw_file = cands[0] if cands else raw_dir / f"{stem}.json"
+        base = raw_file.name
         if not recorded:
             safe_print(f"  [NO-HASH] {base}: raw_sha256 없음")
             n_missing += 1

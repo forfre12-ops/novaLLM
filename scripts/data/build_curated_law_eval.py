@@ -11,21 +11,25 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import unicodedata
+import sys
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from eval.citation_verify import _norm as _scorer_norm  # noqa: E402
+
 DEFAULT_SPEC = Path("eval/curated_law_seed.json")
 
-# Minimum contiguous article substring (whitespace-normalized chars) that, if it
-# appears in an answerable question, counts as a gold leak. Below this length the
-# overlap is almost always a statute name or common legal phrase (false positive).
+# Minimum contiguous article substring (normalized chars) that, if it appears in
+# an answerable question, counts as a gold leak. Below this length the overlap is
+# almost always a statute name or common legal phrase (false positive).
 ANSWERABLE_LEAK_MIN_CHARS = 20
 
 
 def _wsnorm(s: str) -> str:
-    """NFC + whitespace-collapse for robust leak/substring guards."""
-    return re.sub(r"\s+", " ", unicodedata.normalize("NFC", s or "")).strip()
+    """스코어러(citation_verify._norm)와 동일 정규화 — 가드가 스코어러의 substring 동등성과
+    일치해야 folded-variant(ㆍ vs ·, 전각) leak을 놓치지 않는다."""
+    return _scorer_norm(s or "")
 
 
 def load_articles(path: Path) -> dict[str, str]:

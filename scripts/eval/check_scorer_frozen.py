@@ -107,21 +107,30 @@ def main() -> int:
             f"FAITHBENCH_VERSION 불일치: golden={golden.get('faithbench_version')} "
             f"code={FAITHBENCH_VERSION} — 규칙이 바뀌었는데 golden 미갱신이거나 그 반대"
         )
+    if golden.get("citation_verify_version") != SCORER_VERSION:
+        problems.append(
+            f"SCORER_VERSION 불일치: golden={golden.get('citation_verify_version')} code={SCORER_VERSION}"
+        )
     if current["partial"]["partial_version"] != golden.get("partial", {}).get("partial_version"):
         problems.append(
             f"PARTIAL_VERSION 불일치: golden={golden.get('partial', {}).get('partial_version')} "
             f"code={PARTIAL_VERSION}"
         )
-    if _canon(current["aggregate"]) != _canon(golden.get("aggregate", {})):
-        # 어느 모델·지표가 어긋났는지 짚어준다.
+    # canonical 비교로 verdict를 결정(상세 loop는 메시지 보강용). 지표/모델 '삭제'도
+    # canon을 바꾸므로 여기서 반드시 problem을 append해야 false PASS를 막는다.
+    gold_agg_all = golden.get("aggregate", {})
+    if _canon(current["aggregate"]) != _canon(gold_agg_all):
+        problems.append("aggregate 드리프트 감지(모델/지표 추가·삭제·값변경)")
+        for m in sorted(set(gold_agg_all) - set(current["aggregate"])):
+            problems.append(f"  aggregate 모델 삭제: {m}")
         for m, agg in current["aggregate"].items():
-            gold_agg = golden.get("aggregate", {}).get(m, {})
-            diffs = [k for k in agg if agg.get(k) != gold_agg.get(k)]
+            gold_agg = gold_agg_all.get(m, {})
+            diffs = sorted(k for k in set(agg) | set(gold_agg) if agg.get(k) != gold_agg.get(k))
             if diffs:
-                problems.append(f"aggregate 드리프트 [{m}]: " + ", ".join(
-                    f"{k} {gold_agg.get(k)}→{agg.get(k)}" for k in diffs))
+                problems.append(f"  aggregate 드리프트 [{m}]: " + ", ".join(
+                    f"{k} {gold_agg.get(k)}->{agg.get(k)}" for k in diffs))
     if _canon(current["partial"]) != _canon(golden.get("partial", {})):
-        problems.append("partial 스코어러 드리프트 — score_partial 규칙 변경 감지")
+        problems.append("partial 스코어러 드리프트(score_partial 규칙 변경 감지)")
 
     if problems:
         safe_print("check_scorer_frozen: FAIL")
