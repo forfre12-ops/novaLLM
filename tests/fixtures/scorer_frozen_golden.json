@@ -1,0 +1,55 @@
+{
+  "aggregate": {
+    "base_large_fewshot": {
+      "answerable_no_citation_rate": 0.548,
+      "answerable_refused_rate": 0.011,
+      "distractor_cite_rate": 0.0,
+      "faithfulness_mean": 0.387,
+      "gold_recall": 0.387,
+      "leak_citation_rate": 0.0,
+      "leak_parametric_rate": 0.0,
+      "leak_rate": 0.25,
+      "leak_uncited_rate": 0.25,
+      "leak_ungrounded_rate": 0.25,
+      "n_answerable": 93,
+      "n_unanswerable": 8,
+      "refusal_rate": 0.75,
+      "selection_exact": 0.387
+    },
+    "base_small_fewshot": {
+      "answerable_no_citation_rate": 0.14,
+      "answerable_refused_rate": 0.0,
+      "distractor_cite_rate": 0.226,
+      "faithfulness_mean": 0.22,
+      "gold_recall": 0.215,
+      "leak_citation_rate": 0.25,
+      "leak_parametric_rate": 0.0,
+      "leak_rate": 0.625,
+      "leak_uncited_rate": 0.375,
+      "leak_ungrounded_rate": 0.375,
+      "n_answerable": 93,
+      "n_unanswerable": 8,
+      "refusal_rate": 0.375,
+      "selection_exact": 0.215
+    },
+    "ft_small_zeroshot": {
+      "answerable_no_citation_rate": 0.022,
+      "answerable_refused_rate": 0.022,
+      "distractor_cite_rate": 0.204,
+      "faithfulness_mean": 0.806,
+      "gold_recall": 0.742,
+      "leak_citation_rate": 0.0,
+      "leak_parametric_rate": 0.0,
+      "leak_rate": 0.0,
+      "leak_uncited_rate": 0.0,
+      "leak_ungrounded_rate": 0.0,
+      "n_answerable": 93,
+      "n_unanswerable": 8,
+      "refusal_rate": 1.0,
+      "selection_exact": 0.742
+    }
+  },
+  "citation_verify_version": "0.2",
+  "faithbench_version": "0.2",
+  "source_transcript": "docs/env-verify/g0-faithbench-v02-result-transcript.jsonl"
+}

@@ -23,6 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from citation_verify import _norm, load_corpus, verify  # noqa: E402
 from faithbench import _context_block, _pick_distractors  # noqa: E402
 
+# 부분-span 스코어러 버전 — 채점 규칙 변경 시 bump. 현재 동결 v0.1.
+PARTIAL_VERSION = "0.1"
+
 PARTIAL_SYS = (
     "너는 제공된 근거 조항만 사용해 답한다. 여러 근거 중 질문에 해당하는 조항을 찾아, "
     "그 조항에서 **질문에 해당하는 부분만** 「원문 인용」[조항ID] 형식으로 인용한다. "

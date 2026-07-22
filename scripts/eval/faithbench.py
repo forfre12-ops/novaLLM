@@ -40,6 +40,11 @@ def instance_id(split: str, gold: list[str], question: str, context_ids: list[st
     canon = "\x1f".join([split, ",".join(gold), question, ",".join(context_ids)])
     return hashlib.sha1(canon.encode("utf-8")).hexdigest()[:16]
 
+# 스코어러 버전 — 채점 규칙/스키마 변경 시 반드시 bump하고 golden(tests/fixtures)을 재생성한다.
+# 모델 비교 주장은 동결된 버전 기준에서만 유효(g0-verdict.md §6).
+# 0.1 → 0.2: gold-ablation probe_type + 무인용 leak 유형학(parametric/ungrounded) 추가(additive).
+FAITHBENCH_VERSION = "0.2"
+
 SYS = (
     "너는 제공된 근거 조항만 사용해 답한다. 여러 근거 중 질문에 해당하는 조항을 찾아 "
     "반드시 「원문 인용」[조항ID] 형식으로 인용한다. 해당하는 근거가 없으면 "

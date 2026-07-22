@@ -39,6 +39,9 @@ def main() -> int:
          "--transcript", "docs/env-verify/g0-faithbench-v02-result-transcript.jsonl",
          "--corpus", "data/seed/constitution.json",
          "--expect", "docs/env-verify/g0-faithbench-v02-result.json"])
+    # 스코어러 동결 게이트: 전체 aggregate(leak 유형학 포함)를 golden과 byte-exact 비교.
+    # 규칙이 바뀌면 FAITHBENCH_VERSION bump + golden 재생성 없이는 여기서 깨진다.
+    run([PY, "scripts/eval/check_scorer_frozen.py"])
     run([PY, "scripts/data/fetch_law.py", "--smoke"])
     run([PY, "scripts/data/fetch_law.py", "--smoke", "--response-type", "XML"])
     run([PY, "scripts/data/law_corpus.py", "--demo"])
