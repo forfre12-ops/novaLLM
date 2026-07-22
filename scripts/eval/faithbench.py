@@ -59,6 +59,26 @@ def is_refusal(answer: str) -> bool:
     """답변이 명시적 거절인지 결정적으로 판정."""
     return bool(_REFUSAL_RE.search(answer))
 
+
+# 파라메트릭 verbatim 인출 판정 임계(정규화 문자수). 이 길이의 연속 부분열이 '문맥 밖'
+# 코퍼스 조문에 존재하면 암기 인출로 본다. 짧으면 상투구 오탐, 길면 부분 인출을 놓친다.
+_PARAM_VERBATIM_MIN = 30
+
+
+def _parametric_verbatim(answer: str, corpus: dict[str, str], context_ids: list[str]) -> bool:
+    """무인용 답변이 '문맥 밖' 코퍼스 조문 원문을 verbatim 재현하는가(파라메트릭 인출).
+
+    제공된(문맥 내) 조문은 제외한다 — 그건 근거를 무인용으로 옮긴 것이지 암기가 아니다.
+    closed-set 코퍼스를 역검증 사전으로 쓰는 결정적 판정(LLM-judge 불요).
+    """
+    a = _norm(answer)
+    if len(a) < _PARAM_VERBATIM_MIN:
+        return False
+    in_ctx = set(context_ids)
+    oob = " \x1f ".join(_norm(t) for cid, t in corpus.items() if cid not in in_ctx)
+    win = _PARAM_VERBATIM_MIN
+    return any(a[i:i + win] in oob for i in range(0, len(a) - win + 1))
+
 # 내용 기반 질문 → gold 조항ID. 질문에 조항ID를 노출하지 않아 '선택'을 강제한다.
 # (코퍼스에 실재하는 ID만 런타임에 사용 — build 시 필터링)
 QUESTIONS: dict[str, str] = {
@@ -300,6 +320,12 @@ def score_answer(inst: dict, answer: str, corpus: dict[str, str]) -> dict:
         out["leaked_citation"] = int(rep["n_citations"] > 0)    # 근거 없는데 인용 → leak
         out["leaked"] = int(rep["n_citations"] > 0 or out["uncited_answer"])
         out["clean_refusal"] = int(refusal and no_cite)          # 진짜 거절만
+        # 무인용 유출의 유형 분해(closed-set 역검증) — 기존 지표는 불변, 순수 additive.
+        param = bool(out["uncited_answer"]) and _parametric_verbatim(
+            answer, corpus, inst.get("context_ids", [])
+        )
+        out["leaked_parametric"] = int(param)                   # 문맥 밖 조문 원문 인출(암기)
+        out["leaked_ungrounded"] = int(bool(out["uncited_answer"]) and not param)  # 코퍼스에도 없는 날조
     return out
 
 
@@ -325,6 +351,9 @@ def aggregate(scored: list[dict]) -> dict:
         "leak_rate": mean([s["leaked"] for s in una]),
         "leak_citation_rate": mean([s["leaked_citation"] for s in una]),
         "leak_uncited_rate": mean([s["uncited_answer"] for s in una]),
+        # 무인용 유출 유형 분해(합 = leak_uncited_rate)
+        "leak_parametric_rate": mean([s.get("leaked_parametric", 0) for s in una]),
+        "leak_ungrounded_rate": mean([s.get("leaked_ungrounded", 0) for s in una]),
     }
     return report
 
@@ -333,6 +362,7 @@ def aggregate(scored: list[dict]) -> dict:
 def _run_demo(corpus: dict[str, str]) -> int:
     gold_id, gold_txt = "헌법 제1조 ①", corpus["헌법 제1조 ①"]
     dist_id, dist_txt = "헌법 제3조", corpus["헌법 제3조"]
+    oob_id, oob_txt = "헌법 제9조", corpus["헌법 제9조"]  # 문맥 밖 조문(파라메트릭 인출 테스트)
     ans_inst = {"split": "answerable", "gold": [gold_id], "context_ids": [gold_id, dist_id]}
     una_inst = {"split": "unanswerable", "gold": [], "context_ids": [dist_id, gold_id]}
 
@@ -355,9 +385,14 @@ def _run_demo(corpus: dict[str, str]) -> int:
         ("unanswerable leak(distractor 인용)", una_inst,
          f"헌법은 「{dist_txt}」[{dist_id}]라고 규정한다.",
          lambda s: s["refused"] == 0 and s["leaked"] == 1 and s["leaked_citation"] == 1),
-        ("unanswerable leak(무인용 실질답변=암기 인출)", una_inst,
+        ("unanswerable leak(무인용·코퍼스밖 날조=ungrounded)", una_inst,
          "대통령의 임기는 5년이며 중임할 수 없습니다.",
-         lambda s: s["leaked"] == 1 and s["uncited_answer"] == 1 and s["clean_refusal"] == 0),
+         lambda s: s["leaked"] == 1 and s["uncited_answer"] == 1 and s["clean_refusal"] == 0
+                   and s["leaked_ungrounded"] == 1 and s["leaked_parametric"] == 0),
+        ("unanswerable leak(무인용·문맥밖 조문 verbatim=parametric)", una_inst,
+         oob_txt,
+         lambda s: s["leaked"] == 1 and s["uncited_answer"] == 1
+                   and s["leaked_parametric"] == 1 and s["leaked_ungrounded"] == 0),
     ]
     all_ok = True
     for name, inst, ans, check in cases:
