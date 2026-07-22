@@ -87,9 +87,19 @@ def test_leak_parametric():
 
 
 def test_parametric_helper_excludes_in_context():
-    # 문맥 안 조문을 그대로 옮기면 parametric 아님(제공근거를 옮긴 것)
-    assert _parametric_verbatim(CORPUS[DIST], CORPUS, [DIST, GID]) is False
+    # 문맥 안 조문(30자↑)을 그대로 옮기면 parametric 아님(제공근거 이동).
+    # 12조③은 문맥 밖 16조와 영장 clause span을 공유 → span단위 제외가 없으면 오분류(버그).
+    a12 = next(x for x in CORPUS if "제12조" in x and "③" in x)
+    assert _parametric_verbatim(CORPUS[a12], CORPUS, [a12, GID]) is False
+    # 문맥 밖 조문 원문 재현은 parametric
     assert _parametric_verbatim(CORPUS[OOB], CORPUS, [DIST, GID]) is True
+
+
+def test_leak_incontext_copy_not_parametric():
+    # 회귀: 문맥 내 조문을 무인용 복사 → score_answer가 ungrounded로(공유 span에도 불구).
+    a12 = next(x for x in CORPUS if "제12조" in x and "③" in x)
+    s = score_answer(_una([a12, GID]), CORPUS[a12], CORPUS)
+    assert s["leaked_ungrounded"] == 1 and s["leaked_parametric"] == 0
 
 
 def test_is_refusal():

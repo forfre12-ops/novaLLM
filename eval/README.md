@@ -8,7 +8,7 @@
 | 도구 | 측정 | 자기검증 |
 |------|------|----------|
 | `scripts/eval/citation_verify.py` | 인용 실존·substring(hallucinated/misquote/supported), 스코어러 v0.2 | `--demo` |
-| `scripts/eval/faithbench.py` | K조문 중 **올바른 조문 선택** 인용(selection_exact) + leak 유형학(parametric/ungrounded) + gold-ablation 프로브, 스코어러 v0.2 | `--demo` |
+| `scripts/eval/faithbench.py` | K조문 중 **올바른 조문 선택** 인용(selection_exact) + leak 유형학(parametric/ungrounded) + gold-ablation 프로브, 스코어러 v0.3 | `--demo` |
 | `scripts/eval/faithbench_partial.py` | **tight 부분인용**(span precision/recall/F1, 통째복사 페널티), 스코어러 v0.1 | `--demo` |
 | `scripts/eval/score_predictions.py` | 오프라인 결정적 채점(모델 불요): `rescore`(공표결과 재현) / `predictions`(제3자 제출) | — |
 | `scripts/eval/check_scorer_frozen.py` | 스코어러 동결 게이트 — 전체 aggregate를 golden과 byte-exact 비교(smoke/CI) | `(smoke)` |
@@ -44,9 +44,9 @@
 
 ## 벤치 동결 규칙
 
-faithbench **v0.2** / faithbench_partial **v0.1** / citation_verify **v0.2** 동결.
-(faithbench는 v0.1→v0.2에서 gold-ablation 프로브 + 무인용 leak 유형학을 additive로 추가했고,
-기존 지표 selection_exact/leak_rate 등은 불변이다.) 버전 상수는 각 스코어러 코드에 있고,
+faithbench **v0.3** / faithbench_partial **v0.1** / citation_verify **v0.2** 동결.
+(v0.1→v0.2: gold-ablation + leak 유형학 additive. v0.2→v0.3: parametric 판정을 span단위
+문맥제외로 교정. 기존 지표 selection_exact/leak_rate 등은 불변이다.) 버전 상수는 각 스코어러 코드에 있고,
 `scripts/eval/check_scorer_frozen.py`가 전체 aggregate를 golden과 byte-exact 비교해 smoke/CI에서
 동결을 **기계 강제**한다 — 규칙을 바꾸려면 버전 bump + golden 재생성이 강제된다. 다음 벤치 변형
 (의미 채점·다중 gold 등)은 **다법령 수집 또는 HRET 기여 준비와 직접 연결될 때만** 착수한다

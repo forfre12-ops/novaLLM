@@ -49,7 +49,9 @@ def _read_jsonl(path: Path) -> list[dict]:
 def _inst_from_row(row: dict) -> dict:
     """transcript/instances 행에서 채점에 필요한 최소 inst 재구성.
 
-    score_answer는 inst['split']와 inst['gold'](list)만 읽는다.
+    score_answer는 inst['split']·inst['gold'](list)·inst['context_ids']를 읽는다.
+    context_ids는 unanswerable leak 유형학(parametric vs ungrounded)에서 '제공된 근거'를
+    판별하는 데 필수 — 빠지면 문맥 내 조문 복사를 parametric으로 오분류한다.
     """
     gold = row.get("gold")
     if isinstance(gold, list):
@@ -58,7 +60,7 @@ def _inst_from_row(row: dict) -> dict:
         gold_list = [gold]
     else:
         gold_list = []
-    return {"split": row["split"], "gold": gold_list}
+    return {"split": row["split"], "gold": gold_list, "context_ids": row.get("context_ids", [])}
 
 
 def _score_rows(rows: list[dict], answers: list[str], corpus: dict[str, str]) -> dict:
@@ -85,7 +87,9 @@ def rescore(args) -> int:
     if args.expect:
         expected = json.loads(Path(args.expect).read_text(encoding="utf-8")).get("results", {})
         keys = ["selection_exact", "gold_recall", "distractor_cite_rate", "faithfulness_mean",
-                "leak_rate", "refusal_rate", "answerable_no_citation_rate"]
+                "leak_rate", "leak_citation_rate", "leak_uncited_rate",
+                "leak_parametric_rate", "leak_ungrounded_rate",
+                "refusal_rate", "answerable_no_citation_rate"]
         for m, agg in results.items():
             exp = expected.get(m)
             if exp is None:

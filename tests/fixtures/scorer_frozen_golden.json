@@ -50,7 +50,7 @@
     }
   },
   "citation_verify_version": "0.2",
-  "faithbench_version": "0.2",
+  "faithbench_version": "0.3",
   "partial": {
     "aggregate": {
       "n": 4,

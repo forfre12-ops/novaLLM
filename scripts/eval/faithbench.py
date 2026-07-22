@@ -43,7 +43,8 @@ def instance_id(split: str, gold: list[str], question: str, context_ids: list[st
 # 스코어러 버전 — 채점 규칙/스키마 변경 시 반드시 bump하고 golden(tests/fixtures)을 재생성한다.
 # 모델 비교 주장은 동결된 버전 기준에서만 유효(g0-verdict.md §6).
 # 0.1 → 0.2: gold-ablation probe_type + 무인용 leak 유형학(parametric/ungrounded) 추가(additive).
-FAITHBENCH_VERSION = "0.2"
+# 0.2 → 0.3: parametric 판정을 span 단위 문맥제외로 교정(문맥 내 조문 복사 오분류 수정).
+FAITHBENCH_VERSION = "0.3"
 
 SYS = (
     "너는 제공된 근거 조항만 사용해 답한다. 여러 근거 중 질문에 해당하는 조항을 찾아 "
@@ -81,8 +82,15 @@ def _parametric_verbatim(answer: str, corpus: dict[str, str], context_ids: list[
         return False
     in_ctx = set(context_ids)
     oob = " \x1f ".join(_norm(t) for cid, t in corpus.items() if cid not in in_ctx)
+    inc = " \x1f ".join(_norm(t) for cid, t in corpus.items() if cid in in_ctx)
     win = _PARAM_VERBATIM_MIN
-    return any(a[i:i + win] in oob for i in range(0, len(a) - win + 1))
+    # window가 문맥 밖 조문에 있으면서 문맥 안(제공근거)에는 없어야 파라메트릭.
+    # (제외를 조문 단위가 아니라 span 단위로 — 문맥 내 조문을 무인용 복사한 것은
+    #  '제공근거 이동'이지 암기 인출이 아니다. 조문 간 공유 span으로 오분류 방지.)
+    return any(
+        a[i:i + win] in oob and a[i:i + win] not in inc
+        for i in range(0, len(a) - win + 1)
+    )
 
 # 내용 기반 질문 → gold 조항ID. 질문에 조항ID를 노출하지 않아 '선택'을 강제한다.
 # (코퍼스에 실재하는 ID만 런타임에 사용 — build 시 필터링)
