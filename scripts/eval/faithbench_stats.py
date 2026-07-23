@@ -104,18 +104,22 @@ def holm(pairs: list[tuple[str, float]], alpha: float = 0.05) -> dict[str, dict]
     return out
 
 
-def load_transcript(path: Path) -> dict[str, dict[str, int]]:
-    """transcript JSONL → {model: {instance_key: exact}} (answerable만, paired McNemar용)."""
+def load_transcript(path: Path, split: str = "answerable", outcome: str = "exact") -> dict[str, dict[str, int]]:
+    """transcript JSONL → {model: {instance_key: outcome}} (split 필터, paired McNemar용).
+
+    split='answerable'/outcome='exact'(기본, selection 축) 또는 split='unanswerable'/
+    outcome='leaked'(leak 축)로 재사용한다. 키는 안정 instance_id 우선, 구 transcript는
+    gold|question 폴백(unanswerable은 gold가 None이므로 question까지 결합해 충돌 방지).
+    """
     by_model: dict[str, dict[str, int]] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         r = json.loads(line)
-        if r.get("split") != "answerable":
+        if r.get("split") != split:
             continue
-        # 신규 transcript는 안정 instance_id로 페어링, 구본은 gold 문자열로 폴백.
-        key = r.get("instance_id") or str(r.get("gold"))
-        by_model.setdefault(r["model"], {})[key] = int(r.get("exact", 0))
+        key = r.get("instance_id") or f"{r.get('gold')}|{r.get('question')}"
+        by_model.setdefault(r["model"], {})[key] = int(r.get(outcome, 0))
     return by_model
 
 
@@ -245,6 +249,21 @@ def main() -> int:
             f"diff={r['diff']:+} | p={r['p_value']} p_adj={h['p_adj']} -> {verdict}"
         )
     safe_print("\n  주: paired McNemar가 unpaired와 다르면 paired가 정본(같은 인스턴스이므로).")
+
+    # ── leak 축 paired McNemar (unanswerable, leaked outcome) ──
+    tr_leak = load_transcript(tpath, split="unanswerable", outcome="leaked")
+    if sum(1 for a, b, _ in comparisons if a in tr_leak and b in tr_leak):
+        safe_print("\n* paired exact McNemar — leak 축(unanswerable, leaked=1은 유출=나쁨)")
+        for a, b, title in comparisons:
+            if a not in tr_leak or b not in tr_leak:
+                continue
+            r = paired_mcnemar(tr_leak, a, b)
+            safe_print(
+                f"  {title}\n"
+                f"    n_pairs={r['n_pairs']} FT-leaked·base-clean={r['a_only']} "
+                f"FT-clean·base-leaked={r['b_only']} | p={r['p_value']} "
+                f"(base-leaked-only>FT-leaked-only면 FT가 leak 적음)"
+            )
 
     # ── 거절/유출 operating point (전부-거절 게이밍 봉쇄) ──
     aop = abstention_operating_point(res)

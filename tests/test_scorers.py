@@ -176,6 +176,15 @@ def test_abstention_youden():
     assert a["refuse_all"]["youden_j"] == 0.0 and a["ideal"]["youden_j"] == 1.0
 
 
+def test_load_transcript_two_axes():
+    from faithbench_stats import load_transcript
+    tp = ROOT / "docs/env-verify/g0-faithbench-v02-result-transcript.jsonl"
+    sel = load_transcript(tp, "answerable", "exact")
+    leak = load_transcript(tp, "unanswerable", "leaked")
+    assert len(sel) == 3 and len(leak) == 3  # 3 models 각 축
+    assert all(v in (0, 1) for m in leak.values() for v in m.values())
+
+
 def test_mcnemar_and_wilson():
     assert mcnemar_exact(0, 0) == 1.0
     assert mcnemar_exact(10, 0) < 0.01  # 한쪽으로 완전 쏠리면 유의
