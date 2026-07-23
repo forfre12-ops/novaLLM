@@ -46,6 +46,12 @@ def main() -> int:
     run([PY, "tests/test_scorers.py"])
     # OC 키 레닥션 도구 자기검증(공개 배포 전 키 유출 방지 도구).
     run([PY, "scripts/data/redact_export.py", "--selftest"])
+    # fingerprint 카드 생성기가 공표 result에서 결정적으로 돈다(공개물 수기표 대체 도구).
+    with tempfile.TemporaryDirectory(prefix="nova-fp-") as fp:
+        run([PY, "scripts/eval/fingerprint_report.py",
+             "--faithbench", "docs/env-verify/g0-faithbench-v02-result.json",
+             "--partial", "docs/env-verify/g0-partial-v02-result.json",
+             "--json-out", str(Path(fp) / "fp.json"), "--md-out", str(Path(fp) / "fp.md")])
     run([PY, "scripts/data/fetch_law.py", "--smoke"])
     run([PY, "scripts/data/fetch_law.py", "--smoke", "--response-type", "XML"])
     run([PY, "scripts/data/law_corpus.py", "--demo"])

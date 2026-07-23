@@ -12,6 +12,7 @@
 | `scripts/eval/faithbench_partial.py` | **tight 부분인용**(span precision/recall/F1, 통째복사 페널티), 스코어러 v0.1 | `--demo` |
 | `scripts/eval/score_predictions.py` | 오프라인 결정적 채점(모델 불요): `rescore`(공표결과 재현) / `predictions`(제3자 제출) | — |
 | `scripts/eval/check_scorer_frozen.py` | 스코어러 동결 게이트 — 전체 aggregate를 golden과 byte-exact 비교(smoke/CI) | `(smoke)` |
+| `scripts/eval/fingerprint_report.py` | result JSON → 결정적 fingerprint.json + markdown 표(공개물 수기 전사 대체) | `(smoke)` |
 | `scripts/eval/faithbench_stats.py` | Wilson CI + 두-비율 + **paired exact McNemar + Holm 보정** | 단위검증 |
 | `scripts/eval/run_meta.py` | 결과 provenance(git rev·모델·SHA256·seed·scorer 버전) | — |
 | `scripts/train/run_g0_faithbench.py` / `run_g0_partial.py` | 소형 FT vs 대형 base 교차비교(GPU) + per-instance transcript + closed-book 프로브 | — |
