@@ -52,6 +52,7 @@ faithbench **v0.3** / faithbench_partial **v0.1** / citation_verify **v0.2** 동
 동결을 **기계 강제**한다 — 규칙을 바꾸려면 버전 bump + golden 재생성이 강제된다. 다음 벤치 변형
 (의미 채점·다중 gold 등)은 **다법령 수집 또는 HRET 기여 준비와 직접 연결될 때만** 착수한다
 (g0-verdict.md §6). 지표 동결 후에만 모델 비교 주장 허용.
+버전·holdout·오염·재현·right-of-reply 정책은 **[`docs/governance.md`](../docs/governance.md)**(측정 거버넌스 헌장) 참조.
 
 ## 사용
 
