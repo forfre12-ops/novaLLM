@@ -1,5 +1,19 @@
 # NovaXDB 최종 전략 — "한국어 AI 신뢰성 측정·검증 표준을 소유하라" (개정판)
 
+## 2026-07-26 G0 Update
+
+The Qwen3-4B curated-holdout run supports the core strategy: compete on
+citation-grounded statutory QA measurement and verification, not generic model scale.
+
+- FaithBench: Qwen3-4B+LoRA selection_exact 0.904, leak_rate 0.000.
+- Partial span: Qwen3-4B+LoRA partial_exact 0.656, span_f1 0.770.
+- Baseline comparison: Qwen2.5-7B base scored 0.344 selection_exact and 0.300 leak_rate on FaithBench.
+- Verified artifacts: `docs/env-verify/g0-qwen3-4b-summary.md`.
+
+Claim boundary: this is a curated Korean statutory holdout result. Do not frame it as broad
+legal reasoning superiority; frame it as evidence that small specialized grounding can beat
+a larger generic baseline on citation selection, leak-free refusal, and tight-span extraction.
+
 > 4개 전략안(주권형온프렘·벤치마크1등·버티컬전문가·DB네이티브·초효율소형) × 3렌즈 적대검증 = **총 12개 판정 중 STRONG 0, KILL 1, WEAK 11**. 살아남은 단일 승자는 없다. 그러나 12개 검증의 `improvement`가 **모두 같은 방향**을 가리켰다: *"제품(인증형 규제 어플라이언스)을 팔지 말고, 중립 측정·검증 자산을 소유해 유명해지고, 인증·영업을 가진 대기업에 부품·감사로 환금하라."* 이 문서는 그 수렴점을 중심축으로, 각 안의 살아있는 조각만 접목(graft)해 재구성한 최종안이다.
 >
 > **개정 원칙:** 이 전략은 3개의 **미검증 하중 가정** 위에 서 있다 — ①faithfulness가 모델 크기에 상대적으로 독립적이다, ②오픈 명성이 엔터프라이즈 조달로 환금된다, ③1인이 주관적 신뢰성 벤치를 표준으로 만들 수 있다. 개정판은 이 셋을 "믿고 6개월 풀빌드"하지 않는다. **각 가정을 저비용 fail-fast 실험으로 먼저 찔러 신호를 보고 진행/피벗**하며, 무수익 런웨이·수요검증·벤치 지속성을 명시적으로 채운다.

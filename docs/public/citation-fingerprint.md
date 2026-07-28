@@ -20,6 +20,10 @@ The first public prototype used a closed-set corpus of 93 entries from the Const
 The current local seed has expanded to 5 statutes and 3303 closed-set entries. Neither path uses
 an LLM judge: every citation is checked mechanically against the source text.
 
+Current G0 evidence package:
+
+- `docs/public/g0-qwen3-4b-curated-holdout-report.md`
+
 ## Why This Exists
 
 Most grounding evaluations collapse several behaviors into one score. A model can look good

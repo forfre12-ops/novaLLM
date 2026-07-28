@@ -1,5 +1,35 @@
 # nova-llm
 
+## Latest Verified Result: G0 Qwen3-4B
+
+2026-07-26 KST run completed on the curated Korean statutory holdout.
+This is evidence for citation-grounded statutory QA, not a claim of broad legal reasoning superiority.
+
+Artifacts:
+
+- Public report: [`docs/public/g0-qwen3-4b-curated-holdout-report.md`](docs/public/g0-qwen3-4b-curated-holdout-report.md)
+- Freeze manifest: [`docs/env-verify/g0-qwen3-4b-freeze-manifest.md`](docs/env-verify/g0-qwen3-4b-freeze-manifest.md)
+- Summary: [`docs/env-verify/g0-qwen3-4b-summary.md`](docs/env-verify/g0-qwen3-4b-summary.md)
+- FaithBench result: [`docs/env-verify/g0-qwen3-4b-faithbench-result.json`](docs/env-verify/g0-qwen3-4b-faithbench-result.json)
+- Partial-span result: [`docs/env-verify/g0-qwen3-4b-partial-result.json`](docs/env-verify/g0-qwen3-4b-partial-result.json)
+- Adapter: `checkpoints/g0-law-curated-holdout-qwen3-4b/lora_adapter`
+
+| Axis | Qwen3-4B base | Qwen3-4B + LoRA | Qwen2.5-7B base |
+|---|---:|---:|---:|
+| FaithBench selection_exact | 0.088 | **0.904** | 0.344 |
+| FaithBench leak_rate | 0.000 | **0.000** | 0.300 |
+| Partial partial_exact | 0.416 | **0.656** | 0.248 |
+| Partial span_f1 | 0.508 | **0.770** | 0.323 |
+
+Rescore verification passed:
+
+```powershell
+python scripts/eval/score_predictions.py rescore `
+  --transcript docs/env-verify/g0-qwen3-4b-faithbench-result-transcript.jsonl `
+  --corpus data/processed/laws.json `
+  --expect docs/env-verify/g0-qwen3-4b-faithbench-result.json
+```
+
 한국어 법령 근거충실도 측정·검증 워크스페이스 (QLoRA 파인튜닝 + 결정적 citation scoring).
 RTX 5070 Ti 16GB(Blackwell) 단일 GPU 기준.
 
