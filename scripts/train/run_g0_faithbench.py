@@ -25,6 +25,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eval.citation_verify import SCORER_VERSION, load_corpus  # noqa: E402
 from eval.faithbench import (  # noqa: E402
@@ -373,7 +379,7 @@ def main() -> int:
     # combined selection + span_precision + leak criteria.
     ft_r, bl = results["ft_small_zeroshot"], results["base_large_fewshot"]
     ftu, blu = by_split["ft_small_zeroshot"]["unseen"], by_split["base_large_fewshot"]["unseen"]
-    print("\n  대조(selection축, 단정 아님 — span precision·leak과 병기해야 판정):")
+    print("\n  대조(selection축, 단정 아님 - span precision/leak과 병기해야 판정):")
     print(
         f"    전체  selection_exact  FT={ft_r['selection_exact']:>6}  base={bl['selection_exact']:>6}"
         f"  | leak FT={ft_r['leak_rate']:>6} base={bl['leak_rate']:>6}"
@@ -381,17 +387,17 @@ def main() -> int:
     print(
         f"    unseen selection_exact FT={ftu['selection_exact']:>6}  base={blu['selection_exact']:>6}"
     )
-    print("    → tight-span precision은 run_g0_partial.py에서 확인. headline 'small beats large' 금지.")
+    print("    -> tight-span precision은 run_g0_partial.py에서 확인. headline 'small beats large' 금지.")
     if closed_book:
-        print("\n===== 암기 프로브(closed-book) — grounding gain =====")
+        print("\n===== 암기 프로브(closed-book) - grounding gain =====")
         for name, cb in closed_book.items():
             oa = results[name]["selection_exact"]
             print(
                 f"  {name:<22} verbatim_recall={cb['verbatim_recall_rate']:>6} "
                 f"| open selection_exact={oa:>6} | gain={round(oa - cb['verbatim_recall_rate'], 3):>+6}"
             )
-    print("  주의: n 소표본(특히 unseen)·단일 법령 프로토타입. 강한 결론엔 검정력 N·다법령·human anchor 필요.")
-    print("  주의: selection_exact는 인용 형식 순응도를 포함한다 — answerable_no_citation_rate와 함께 해석할 것.")
+    print("  주의: n 소표본(특히 unseen)/단일 법령 프로토타입. 강한 결론엔 검정력 N/다법령/human anchor 필요.")
+    print("  주의: selection_exact는 인용 형식 순응도를 포함한다 - answerable_no_citation_rate와 함께 해석할 것.")
     print("  -> 저장:", outp)
     return 0
 

@@ -1,0 +1,83 @@
+학습 데이터 3000건 로드 → data/processed/law_sft_curated_holdout.jsonl
+베이스 모델 4bit 로드: Qwen/Qwen3-4B (attn=sdpa) ...
+trainable params: 11,796,480 || all params: 4,034,264,576 || trainable%: 0.2924
+WARN: max_seq_length=1536 truncation dropped 32 examples with no assistant labels
+[TRAIN] 2에폭 × 2968건 | 유효배치 1×8=8 | optim step 742 (warmup 22) | grad_ckpt=True
+  step 10/742 | loss 1.3991 | lr 9.09e-05
+  step 20/742 | loss 0.3052 | lr 1.82e-04
+  step 30/742 | loss 0.1049 | lr 2.00e-04
+  step 40/742 | loss 0.0572 | lr 2.00e-04
+  step 50/742 | loss 0.0359 | lr 1.99e-04
+  step 60/742 | loss 0.0378 | lr 1.99e-04
+  step 70/742 | loss 0.0414 | lr 1.98e-04
+  step 80/742 | loss 0.0301 | lr 1.97e-04
+  step 90/742 | loss 0.0478 | lr 1.96e-04
+  step 100/742 | loss 0.0271 | lr 1.94e-04
+  step 110/742 | loss 0.0378 | lr 1.93e-04
+  step 120/742 | loss 0.0342 | lr 1.91e-04
+  step 130/742 | loss 0.0330 | lr 1.89e-04
+  step 140/742 | loss 0.0294 | lr 1.87e-04
+  step 150/742 | loss 0.0348 | lr 1.85e-04
+  step 160/742 | loss 0.0353 | lr 1.82e-04
+  step 170/742 | loss 0.0290 | lr 1.80e-04
+  step 180/742 | loss 0.0348 | lr 1.77e-04
+  step 190/742 | loss 0.0331 | lr 1.74e-04
+  step 200/742 | loss 0.0270 | lr 1.71e-04
+  step 210/742 | loss 0.0327 | lr 1.68e-04
+  step 220/742 | loss 0.0310 | lr 1.65e-04
+  step 230/742 | loss 0.0257 | lr 1.62e-04
+  step 240/742 | loss 0.0307 | lr 1.58e-04
+  step 250/742 | loss 0.0238 | lr 1.54e-04
+  step 260/742 | loss 0.0281 | lr 1.51e-04
+  step 270/742 | loss 0.0324 | lr 1.47e-04
+  step 280/742 | loss 0.0267 | lr 1.43e-04
+  step 290/742 | loss 0.0310 | lr 1.39e-04
+  step 300/742 | loss 0.0286 | lr 1.35e-04
+  step 310/742 | loss 0.0301 | lr 1.31e-04
+  step 320/742 | loss 0.0248 | lr 1.27e-04
+  step 330/742 | loss 0.0321 | lr 1.22e-04
+  step 340/742 | loss 0.0204 | lr 1.18e-04
+  step 350/742 | loss 0.0352 | lr 1.14e-04
+  step 360/742 | loss 0.0282 | lr 1.10e-04
+  step 370/742 | loss 0.0280 | lr 1.05e-04
+  epoch 1/2 완료
+  step 380/742 | loss 0.0215 | lr 1.01e-04
+  step 390/742 | loss 0.0187 | lr 9.65e-05
+  step 400/742 | loss 0.0209 | lr 9.22e-05
+  step 410/742 | loss 0.0213 | lr 8.78e-05
+  step 420/742 | loss 0.0203 | lr 8.35e-05
+  step 430/742 | loss 0.0219 | lr 7.92e-05
+  step 440/742 | loss 0.0299 | lr 7.50e-05
+  step 450/742 | loss 0.0213 | lr 7.08e-05
+  step 460/742 | loss 0.0272 | lr 6.66e-05
+  step 470/742 | loss 0.0170 | lr 6.25e-05
+  step 480/742 | loss 0.0196 | lr 5.85e-05
+  step 490/742 | loss 0.0238 | lr 5.46e-05
+  step 500/742 | loss 0.0168 | lr 5.08e-05
+  step 510/742 | loss 0.0146 | lr 4.70e-05
+  step 520/742 | loss 0.0180 | lr 4.34e-05
+  step 530/742 | loss 0.0177 | lr 3.98e-05
+  step 540/742 | loss 0.0199 | lr 3.64e-05
+  step 550/742 | loss 0.0197 | lr 3.31e-05
+  step 560/742 | loss 0.0240 | lr 2.99e-05
+  step 570/742 | loss 0.0189 | lr 2.69e-05
+  step 580/742 | loss 0.0185 | lr 2.40e-05
+  step 590/742 | loss 0.0201 | lr 2.12e-05
+  step 600/742 | loss 0.0188 | lr 1.86e-05
+  step 610/742 | loss 0.0232 | lr 1.61e-05
+  step 620/742 | loss 0.0243 | lr 1.38e-05
+  step 630/742 | loss 0.0292 | lr 1.17e-05
+  step 640/742 | loss 0.0208 | lr 9.74e-06
+  step 650/742 | loss 0.0254 | lr 7.95e-06
+  step 660/742 | loss 0.0266 | lr 6.33e-06
+  step 670/742 | loss 0.0160 | lr 4.89e-06
+  step 680/742 | loss 0.0206 | lr 3.64e-06
+  step 690/742 | loss 0.0147 | lr 2.56e-06
+  step 700/742 | loss 0.0187 | lr 1.67e-06
+  step 710/742 | loss 0.0199 | lr 9.73e-07
+  step 720/742 | loss 0.0158 | lr 4.60e-07
+  step 730/742 | loss 0.0149 | lr 1.37e-07
+  step 740/742 | loss 0.0244 | lr 3.81e-09
+  epoch 2/2 완료
+학습 완료: 4559.7s | peak VRAM 7.98 GB
+LoRA 어댑터 저장 완료: checkpoints\g0-law-curated-holdout-qwen3-4b\lora_adapter

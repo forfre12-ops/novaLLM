@@ -24,7 +24,8 @@ seed: 3407
 gradient_checkpointing: true
 
 logging_steps: 10
-save_steps: 0
+# Saves resumable LoRA checkpoints with optimizer/scheduler/training cursor state.
+save_steps: 100
 save_total_limit: 3
 
 output_dir: "checkpoints/g0-law-curated-holdout-qwen3-4b"

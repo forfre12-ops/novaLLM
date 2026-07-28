@@ -15,6 +15,12 @@ import json
 import sys
 from pathlib import Path
 
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except AttributeError:
+        pass
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from eval.citation_verify import load_corpus  # noqa: E402
 from eval.faithbench_partial import (  # noqa: E402
