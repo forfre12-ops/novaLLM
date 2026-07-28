@@ -7,6 +7,7 @@ This is evidence for citation-grounded statutory QA, not a claim of broad legal 
 
 Artifacts:
 
+- Release notes: [`docs/releases/g0-qwen3-4b-alpha.md`](docs/releases/g0-qwen3-4b-alpha.md)
 - Public report: [`docs/public/g0-qwen3-4b-curated-holdout-report.md`](docs/public/g0-qwen3-4b-curated-holdout-report.md)
 - Freeze manifest: [`docs/env-verify/g0-qwen3-4b-freeze-manifest.md`](docs/env-verify/g0-qwen3-4b-freeze-manifest.md)
 - Summary: [`docs/env-verify/g0-qwen3-4b-summary.md`](docs/env-verify/g0-qwen3-4b-summary.md)
