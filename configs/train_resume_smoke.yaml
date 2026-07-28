@@ -1,0 +1,30 @@
+# Tiny CUDA smoke config for validating resumable checkpoint state.
+# It intentionally uses a small tracked demo dataset and ignored output_dir.
+
+base_model: "Qwen/Qwen2.5-1.5B-Instruct"
+chat_template: "chatml"
+
+train_file: "data/processed/resume_smoke_demo.jsonl"
+max_seq_length: 256
+
+lora_r: 4
+lora_alpha: 8
+lora_dropout: 0.0
+load_in_4bit: true
+target_modules: ["q_proj", "v_proj"]
+
+batch_size: 1
+grad_accum: 1
+epochs: 1
+learning_rate: 2.0e-4
+weight_decay: 0.01
+warmup_ratio: 0.0
+seed: 3407
+gradient_checkpointing: false
+
+logging_steps: 1
+save_steps: 1
+save_total_limit: 3
+
+output_dir: "checkpoints/resume-smoke"
+report_to: "none"

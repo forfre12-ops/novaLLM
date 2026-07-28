@@ -1,0 +1,3 @@
+{"messages":[{"role":"system","content":"Answer with the cited source only."},{"role":"user","content":"What does demo law article 1 say?"},{"role":"assistant","content":"It says demo article one. [Demo Act Article 1]"}]}
+{"messages":[{"role":"system","content":"Answer with the cited source only."},{"role":"user","content":"What does demo law article 2 say?"},{"role":"assistant","content":"It says demo article two. [Demo Act Article 2]"}]}
+{"messages":[{"role":"system","content":"Answer with the cited source only."},{"role":"user","content":"What if no source is provided?"},{"role":"assistant","content":"The provided sources do not support an answer."}]}

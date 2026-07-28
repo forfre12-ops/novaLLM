@@ -25,6 +25,7 @@ import random
 import shutil
 import time
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -102,19 +103,107 @@ def collate(batch: list[tuple[list[int], list[int]]], pad_id: int):
     )
 
 
-def save_checkpoint(model, out_dir: Path, kept: list[Path], limit: int) -> None:
-    """LoRA 어댑터 중간 체크포인트 저장 + save_total_limit 초과분 정리."""
+def checkpoint_step(path: Path) -> int:
+    try:
+        return int(path.name.rsplit("-", 1)[1])
+    except (IndexError, ValueError):
+        return -1
+
+
+def existing_checkpoints(out_root: Path) -> list[Path]:
+    return sorted(
+        [p for p in out_root.glob("checkpoint-*") if p.is_dir()],
+        key=checkpoint_step,
+    )
+
+
+def resolve_resume_path(value: str | None, out_root: Path) -> Path | None:
+    if not value:
+        return None
+    if value.lower() == "latest":
+        checkpoints = existing_checkpoints(out_root)
+        if not checkpoints:
+            raise SystemExit(f"--resume-from latest requested, but no checkpoints found in {out_root}")
+        return checkpoints[-1]
+    return Path(value)
+
+
+def save_checkpoint(
+    model,
+    opt,
+    sched,
+    out_dir: Path,
+    kept: list[Path],
+    limit: int,
+    *,
+    epoch: int,
+    next_start: int,
+    micro: int,
+    ostep: int,
+    win_loss: list[float],
+    encoded: list[tuple[list[int], list[int]]],
+    rng: random.Random,
+    torch_mod,
+    cfg: dict,
+    total_optim_steps: int,
+) -> None:
+    """Save a resumable LoRA training checkpoint and prune old checkpoints."""
     out_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(str(out_dir))
+    trainer_state = {
+        "schema_version": 1,
+        "epoch": epoch,
+        "next_start": next_start,
+        "micro": micro,
+        "ostep": ostep,
+        "win_loss": win_loss,
+        "encoded": encoded,
+        "rng_state": rng.getstate(),
+        "torch_rng_state": torch_mod.get_rng_state(),
+        "cuda_rng_state_all": torch_mod.cuda.get_rng_state_all(),
+        "optimizer": opt.state_dict(),
+        "scheduler": sched.state_dict(),
+        "config": {
+            "base_model": cfg.get("base_model"),
+            "train_file": cfg.get("train_file"),
+            "max_seq_length": cfg.get("max_seq_length"),
+            "batch_size": cfg.get("batch_size"),
+            "grad_accum": cfg.get("grad_accum"),
+            "epochs": cfg.get("epochs"),
+            "learning_rate": cfg.get("learning_rate"),
+            "seed": cfg.get("seed"),
+        },
+        "total_optim_steps": total_optim_steps,
+    }
+    torch_mod.save(trainer_state, out_dir / "trainer_state.pt")
+    kept[:] = [p for p in kept if p != out_dir]
     kept.append(out_dir)
     while len(kept) > limit:
         old = kept.pop(0)
         shutil.rmtree(old, ignore_errors=True)
 
 
+def load_trainer_state(path: Path, torch_mod) -> dict[str, Any]:
+    state_path = path / "trainer_state.pt"
+    if not state_path.exists():
+        raise SystemExit(f"resume checkpoint is missing trainer_state.pt: {state_path}")
+    return torch_mod.load(state_path, map_location="cpu", weights_only=False)
+
+
+def move_optimizer_state_to_device(opt, device: str) -> None:
+    for state in opt.state.values():
+        for key, value in list(state.items()):
+            if hasattr(value, "to"):
+                state[key] = value.to(device)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/train_config.yaml")
+    parser.add_argument(
+        "--resume-from",
+        help="checkpoint directory to resume from, or 'latest' under output_dir",
+    )
     args = parser.parse_args()
     cfg = load_config(args.config)
 
@@ -125,7 +214,7 @@ def main() -> None:
         BitsAndBytesConfig,
         get_cosine_schedule_with_warmup,
     )
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+    from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
 
     if not torch.cuda.is_available():
         raise SystemExit(
@@ -146,6 +235,8 @@ def main() -> None:
     save_total_limit = int(cfg.get("save_total_limit", 3))
     grad_ckpt = bool(cfg.get("gradient_checkpointing", True))
     target_modules = cfg.get("target_modules") or DEFAULT_TARGET_MODULES
+    out_root = Path(cfg["output_dir"])
+    resume_path = resolve_resume_path(args.resume_from, out_root)
 
     # ── 1) 데이터 로드 (datasets 미사용) ──
     rows = read_jsonl(cfg["train_file"])
@@ -187,15 +278,19 @@ def main() -> None:
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )
 
-    # ── 3) LoRA 어댑터 부착 ──
-    lcfg = LoraConfig(
-        r=int(cfg["lora_r"]),
-        lora_alpha=int(cfg["lora_alpha"]),
-        lora_dropout=float(cfg.get("lora_dropout", 0.0)),
-        target_modules=list(target_modules),
-        task_type="CAUSAL_LM",
-    )
-    model = get_peft_model(model, lcfg)
+    # ── 3) LoRA 어댑터 부착/복원 ──
+    if resume_path:
+        print(f"LoRA 체크포인트 로드: {resume_path}")
+        model = PeftModel.from_pretrained(model, str(resume_path), is_trainable=True)
+    else:
+        lcfg = LoraConfig(
+            r=int(cfg["lora_r"]),
+            lora_alpha=int(cfg["lora_alpha"]),
+            lora_dropout=float(cfg.get("lora_dropout", 0.0)),
+            target_modules=list(target_modules),
+            task_type="CAUSAL_LM",
+        )
+        model = get_peft_model(model, lcfg)
     model.print_trainable_parameters()
 
     # ── 4) 토큰화(+라벨 마스킹) ──
@@ -220,9 +315,8 @@ def main() -> None:
     sched = get_cosine_schedule_with_warmup(opt, warmup_steps, total_optim_steps)
 
     # ── 6) 학습 루프 ──
-    out_root = Path(cfg["output_dir"])
     out_root.mkdir(parents=True, exist_ok=True)
-    kept_ckpts: list[Path] = []
+    kept_ckpts: list[Path] = existing_checkpoints(out_root)
     model.train()
     torch.cuda.reset_peak_memory_stats()
     print(
@@ -232,10 +326,50 @@ def main() -> None:
     t0 = time.time()
     micro = 0
     ostep = 0
+    start_epoch = 0
+    resume_start = 0
     win_loss: list[float] = []
-    for ep in range(epochs):
-        rng.shuffle(encoded)
-        for start in range(0, len(encoded), batch_size):
+
+    if resume_path:
+        state = load_trainer_state(resume_path, torch)
+        if int(state.get("total_optim_steps", total_optim_steps)) != total_optim_steps:
+            raise SystemExit(
+                "resume checkpoint total_optim_steps differs from current config: "
+                f"{state.get('total_optim_steps')} != {total_optim_steps}"
+            )
+        encoded = state["encoded"]
+        if len(encoded) == 0:
+            raise SystemExit(f"resume checkpoint has no encoded rows: {resume_path}")
+        opt.load_state_dict(state["optimizer"])
+        move_optimizer_state_to_device(opt, "cuda")
+        sched.load_state_dict(state["scheduler"])
+        rng.setstate(state["rng_state"])
+        torch.set_rng_state(state["torch_rng_state"])
+        torch.cuda.set_rng_state_all(state["cuda_rng_state_all"])
+        start_epoch = int(state["epoch"])
+        resume_start = int(state["next_start"])
+        micro = int(state["micro"])
+        ostep = int(state["ostep"])
+        win_loss = list(state.get("win_loss", []))
+        opt.zero_grad(set_to_none=True)
+        if resume_start >= len(encoded):
+            start_epoch += 1
+            resume_start = 0
+        if start_epoch >= epochs:
+            print(f"[RESUME] {resume_path} | already complete at step={ostep}/{total_optim_steps}")
+        else:
+            print(
+                f"[RESUME] {resume_path} | epoch {start_epoch + 1}/{epochs}, "
+                f"batch_start={resume_start}, step={ostep}/{total_optim_steps}"
+            )
+
+    for ep in range(start_epoch, epochs):
+        if ep == start_epoch and resume_path and resume_start > 0:
+            epoch_start = resume_start
+        else:
+            rng.shuffle(encoded)
+            epoch_start = 0
+        for start in range(epoch_start, len(encoded), batch_size):
             ids, am, labels = collate(encoded[start:start + batch_size], tok.pad_token_id)
             ids, am, labels = ids.to("cuda"), am.to("cuda"), labels.to("cuda")
             out = model(input_ids=ids, attention_mask=am, labels=labels)
@@ -259,7 +393,29 @@ def main() -> None:
                     win_loss = []
                     print(f"  step {ostep}/{total_optim_steps} | loss {avg:.4f} | lr {sched.get_last_lr()[0]:.2e}")
                 if save_steps > 0 and ostep % save_steps == 0:
-                    save_checkpoint(model, out_root / f"checkpoint-{ostep}", kept_ckpts, save_total_limit)
+                    next_start = start + batch_size
+                    checkpoint_epoch = ep
+                    if next_start >= len(encoded):
+                        checkpoint_epoch = ep + 1
+                        next_start = 0
+                    save_checkpoint(
+                        model,
+                        opt,
+                        sched,
+                        out_root / f"checkpoint-{ostep}",
+                        kept_ckpts,
+                        save_total_limit,
+                        epoch=checkpoint_epoch,
+                        next_start=next_start,
+                        micro=micro,
+                        ostep=ostep,
+                        win_loss=win_loss,
+                        encoded=encoded,
+                        rng=rng,
+                        torch_mod=torch,
+                        cfg=cfg,
+                        total_optim_steps=total_optim_steps,
+                    )
                     print(f"  체크포인트 저장: {out_root / f'checkpoint-{ostep}'}")
         print(f"  epoch {ep + 1}/{epochs} 완료")
     # 남은 그래디언트 flush
