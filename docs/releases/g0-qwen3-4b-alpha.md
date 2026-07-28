@@ -33,6 +33,7 @@ production legal advice readiness.
 ## Evidence
 
 - Public report: `docs/public/g0-qwen3-4b-curated-holdout-report.md`
+- HRET card: `docs/public/g0-qwen3-4b-hret-benchmark-card.md`
 - Freeze manifest: `docs/env-verify/g0-qwen3-4b-freeze-manifest.md`
 - Summary: `docs/env-verify/g0-qwen3-4b-summary.md`
 - FaithBench result: `docs/env-verify/g0-qwen3-4b-faithbench-result.json`
@@ -59,6 +60,6 @@ Observed before publishing:
 ## Recommended Next Work
 
 1. Expand the human-audited holdout to 300-500 answerable and partial-span items.
-2. Export an HRET/HAE-RAE compatible benchmark card.
+2. Map the HRET/HAE-RAE benchmark card to the current upstream toolkit API.
 3. Add one Korean-specialized open model and one 7-14B instruction baseline.
 4. Build a product-facing RAG demo that exposes citation IDs, refusal behavior, and leak checks.

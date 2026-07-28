@@ -9,6 +9,7 @@ Artifacts:
 
 - Release notes: [`docs/releases/g0-qwen3-4b-alpha.md`](docs/releases/g0-qwen3-4b-alpha.md)
 - Public report: [`docs/public/g0-qwen3-4b-curated-holdout-report.md`](docs/public/g0-qwen3-4b-curated-holdout-report.md)
+- HRET card: [`docs/public/g0-qwen3-4b-hret-benchmark-card.md`](docs/public/g0-qwen3-4b-hret-benchmark-card.md)
 - Freeze manifest: [`docs/env-verify/g0-qwen3-4b-freeze-manifest.md`](docs/env-verify/g0-qwen3-4b-freeze-manifest.md)
 - Summary: [`docs/env-verify/g0-qwen3-4b-summary.md`](docs/env-verify/g0-qwen3-4b-summary.md)
 - FaithBench result: [`docs/env-verify/g0-qwen3-4b-faithbench-result.json`](docs/env-verify/g0-qwen3-4b-faithbench-result.json)
