@@ -6,6 +6,6 @@
     12,
     0
   ],
-  "bf16_matmul_ms": 8.461,
-  "tflops": 16.2
+  "bf16_matmul_ms": 5.994,
+  "tflops": 22.9
 }
